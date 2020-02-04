@@ -12,17 +12,19 @@ import (
 	"strconv"
 	"sync"
 
-	"github.com/signalfx/golib/v3/datapoint/dpsink"
-
 	"github.com/apache/thrift/lib/go/thrift"
 	"github.com/gorilla/mux"
+	"github.com/jaegertracing/jaeger/model"
+	jThriftConverter "github.com/jaegertracing/jaeger/model/converter/thrift/jaeger"
 	jThrift "github.com/jaegertracing/jaeger/thrift-gen/jaeger"
 	"github.com/opentracing/opentracing-go/ext"
+	"github.com/signalfx/golib/v3/datapoint/dpsink"
 	"github.com/signalfx/golib/v3/log"
 	"github.com/signalfx/golib/v3/pointer"
 	"github.com/signalfx/golib/v3/sfxclient"
 	"github.com/signalfx/golib/v3/trace"
 	"github.com/signalfx/golib/v3/web"
+	splunksapm "github.com/signalfx/sapm-proto/gen"
 )
 
 var (
@@ -78,6 +80,33 @@ func NewJaegerThriftDecoderBase() *JaegerThriftDecoderBase {
 			},
 		},
 	}
+}
+
+// JeagerThriftToSAPMDecoder reads an jaeger thrift http.Request and parses it's body into a splunksapm.PostSpansRequest
+type JaegerThriftToSAPMDecoder struct {
+	*JaegerThriftDecoderBase
+}
+
+// Read reads an http request with a jaeger thrift payload and decodes it into SAPM
+func (j *JaegerThriftToSAPMDecoder) Read(ctx context.Context, req *http.Request) (*splunksapm.PostSpansRequest, error) {
+	batch, err := j.JaegerThriftDecoderBase.Read(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	return &splunksapm.PostSpansRequest{
+		Batches: []*model.Batch{
+			{
+				Spans:   jThriftConverter.ToDomain(batch.GetSpans(), batch.GetProcess()),
+				Process: jThriftConverter.ToDomainProcess(batch.GetProcess()),
+			},
+		},
+	}, nil
+}
+
+// NewJaegerThriftToSAPMDecoder returns a new JaegerThriftToSAPMDecoder
+func NewJaegerThriftToSAPMDecoder() *JaegerThriftToSAPMDecoder {
+	return &JaegerThriftToSAPMDecoder{NewJaegerThriftDecoderBase()}
 }
 
 // JaegerThriftTraceDecoderV1 decodes Jaeger thrift spans to structs
