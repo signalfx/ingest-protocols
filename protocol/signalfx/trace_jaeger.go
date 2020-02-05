@@ -82,7 +82,7 @@ func NewJaegerThriftDecoderBase() *JaegerThriftDecoderBase {
 	}
 }
 
-// JeagerThriftToSAPMDecoder reads an jaeger thrift http.Request and parses it's body into a splunksapm.PostSpansRequest
+// JaegerThriftToSAPMDecoder reads an jaeger thrift http.Request and parses it's body into a splunksapm.PostSpansRequest
 type JaegerThriftToSAPMDecoder struct {
 	*JaegerThriftDecoderBase
 }
