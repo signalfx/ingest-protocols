@@ -62,12 +62,12 @@ func (j *JaegerThriftDecoderBase) Read(ctx context.Context, req *http.Request) (
 		Buffer: buf,
 	})
 
-	batch := jThrift.Batch{}
+	batch := &jThrift.Batch{}
 	if err := batch.Read(protocol); err != nil {
 		return nil, ErrInvalidJaegerTraceFormat
 	}
 
-	return &batch, nil
+	return batch, nil
 }
 
 // NewJaegerThriftDecoderBase returns a new JaegerThriftDecoderBase
