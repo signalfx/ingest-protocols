@@ -1,0 +1,80 @@
+syntax = "proto3";
+
+package sfx_log_format;
+
+option go_package = "gen_go/;model";
+
+// LogRequest represents the data that is incoming which is a list of ResourceLogs
+message LogRequest {
+    repeated ResourceLogs resourceLogs = 1;
+}
+
+// ResourceLogs handles either sharing a resource with list of LogRecord or unique for each logRecord
+message ResourceLogs {
+    Resource resource = 1;
+    repeated LogRecord logRecords = 2;
+}
+
+// model is based off https://github.com/open-telemetry/oteps/blob/master/text/0097-log-data-model.md#log-and-event-record-definition
+message LogRecord {
+    fixed64 Timestamp = 1;
+    bytes TraceID = 2;
+    bytes SpanID = 3;
+    fixed32 TraceFlags = 4;
+    string SeverityText = 5;
+    fixed32 SeverityNumber = 6;
+    string Name = 7;
+    Value Body = 8;
+    KeyValueMap Attributes = 9;
+}
+
+// ValueType is the enumeration of possible types that value can have.
+enum ValueType {
+    STRING = 0;
+    INT    = 1;
+    DOUBLE = 2;
+    BOOL   = 3;
+    LIST   = 4;
+    MAP    = 5;
+}
+
+// AnyValue is used to store Body attribute different types of values
+// @TODO: benchmark protobuf auto-gen with gogo/protobuf
+message Value {
+    // type of the value
+    ValueType type = 1;
+    // Only one of the following fields is supposed to contain data (determined by `type` field).
+    // This is deliberately not using Protobuf `oneof`
+    bool v_bool = 2;
+    string v_string = 3;
+    int64 v_int64 = 4;
+    double v_double = 5;
+    ValueList v_list = 6;
+    KeyValueMap v_map = 7;
+}
+
+// KeyAnyValue is a wrapper for map key's and its corresponding any value used for Attributes
+message KeyValue {
+    string key = 1;
+    Value value = 2;
+}
+
+enum LogRecordFlags {
+    UNDEFINED = 0;
+    TRACE_FLAG_MASK = 0x000000FF;
+}
+
+// Resource consists of a list of {key, value} pairs
+message Resource {
+    repeated KeyValue values = 1;
+}
+
+// Value list is a list of any values
+message ValueList {
+    repeated Value values = 1;
+}
+
+// KeyValueMap is a list of {key, any value}
+message KeyValueMap {
+    repeated KeyValue values = 1;
+}
