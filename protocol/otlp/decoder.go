@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"sync"
 
+	"github.com/davecgh/go-spew/spew"
 	"github.com/signalfx/golib/v3/datapoint/dpsink"
 	"github.com/signalfx/golib/v3/log"
 	"github.com/signalfx/ingest-protocols/protocol"
@@ -18,9 +19,10 @@ type httpMetricDecoder struct {
 	sink   dpsink.Sink
 	logger log.Logger
 	buffs  sync.Pool
+	logDPs bool
 }
 
-func NewHTTPMetricDecoder(sink dpsink.Sink, logger log.Logger) signalfx.ErrorReader {
+func NewHTTPMetricDecoder(sink dpsink.Sink, logger log.Logger, logDPs bool) signalfx.ErrorReader {
 	return &httpMetricDecoder{
 		sink:   sink,
 		logger: logger,
@@ -29,6 +31,7 @@ func NewHTTPMetricDecoder(sink dpsink.Sink, logger log.Logger) signalfx.ErrorRea
 				return new(bytes.Buffer)
 			},
 		},
+		logDPs: logDPs,
 	}
 }
 
@@ -44,6 +47,9 @@ func (d *httpMetricDecoder) Read(ctx context.Context, req *http.Request) (err er
 		return err
 	}
 	dps := FromOTLPMetricRequest(&msg)
+	if d.logDPs {
+		d.logger.Log("datapoints", spew.Sdump(dps), "original", msg, "Decoded OTLP datapoints")
+	}
 	if len(dps) > 0 {
 		err = d.sink.AddDatapoints(ctx, dps)
 	}
