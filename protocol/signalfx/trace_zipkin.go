@@ -588,7 +588,9 @@ func ParseJaegerSpansFromRequest(req *http.Request) ([]*jaegerpb.Span, error) {
 				if derived := inputSpan.fromZipkinV1(); len(derived) > 0 {
 					// Zipkin v1 spans can map to multiple spans in Zipkin v2
 					for _, s := range derived {
-						spans = append(spans, translator.SAPMSpanFromSFXSpan(s, sm))
+						if span := translator.SAPMSpanFromSFXSpan(s, sm); span != nil {
+							spans = append(spans, span)
+						}
 					}
 				}
 			}
