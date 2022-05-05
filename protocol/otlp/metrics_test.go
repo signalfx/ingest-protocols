@@ -294,7 +294,7 @@ func Test_FromMetrics(t *testing.T) {
 				int64SFxDataPoint("delta_int_with_no_dims", datapoint.Count, nil, int64Val),
 				doubleSFxDataPoint("gauge_sum_double_with_no_dims", datapoint.Gauge, nil, doubleVal),
 				int64SFxDataPoint("gauge_sum_int_with_no_dims", datapoint.Gauge, nil, int64Val),
-				&datapoint.Datapoint{
+				{
 					Metric:     "gauge_sum_int_with_nil_value",
 					Timestamp:  ts,
 					Value:      nil,
@@ -604,12 +604,21 @@ func Test_FromMetrics(t *testing.T) {
 			rms := tt.metricsFn()
 			gotSfxDataPoints := FromOTLPMetricRequest(&metricsservicev1.ExportMetricsServiceRequest{ResourceMetrics: rms})
 			So(tt.wantSfxDataPoints, ShouldResemble, gotSfxDataPoints)
+			
+			dpsFromMetric := FromMetric(rms[0].GetInstrumentationLibraryMetrics()[0].Metrics[0])
+			So(dpsFromMetric, ShouldNotBeEmpty)
 		})
 	}
 }
 
+func TestMetricTypeDerive(t *testing.T) {
+	Convey("deriveSignalFxMetricType panics if invalid metric", t, func() {
+		So(func() {deriveSignalFxMetricType(&metricsv1.Metric{})}, ShouldPanic)
+	})
+}
+
 func TestAttributesToDimensions(t *testing.T) {
-	Convey("attributesToDimensions", t, func() {
+	Convey("stringifyAttributes", t, func() {
 		attrs := []*commonv1.KeyValue{
 			{
 				Key:   "a",
@@ -658,10 +667,16 @@ func TestAttributesToDimensions(t *testing.T) {
 				Key:   "i",
 				Value: &commonv1.AnyValue{Value: &commonv1.AnyValue_DoubleValue{DoubleValue: 0}},
 			},
+			{
+				Key:   "j",
+				Value: &commonv1.AnyValue{Value: nil},
+			},
 		}
 
-		dims := attributesToDimensions(attrs)
-		So(dims, ShouldResemble, map[string]string{
+		dimKVs := stringifyAttributes(attrs)
+		var m SignalFxMetric
+		m.DP.Attributes = dimKVs
+		So(m.ToDatapoint().Dimensions, ShouldResemble, map[string]string{
 			"a": "s",
 			"c": "true",
 			"d": "44",
@@ -670,6 +685,22 @@ func TestAttributesToDimensions(t *testing.T) {
 			"g": `{"k1":"n1","k2":false,"k3":null,"k4":40.3,"k5":41}`,
 			"i": "0",
 		})
+	})
+
+	Convey("Non-string attributes in SignalFxMetric panic", t, func() {
+		attrs := []*commonv1.KeyValue{
+			{
+				Key:   "a",
+				Value: nil,
+			},
+			{
+				Key:   "c",
+				Value: &commonv1.AnyValue{Value: &commonv1.AnyValue_BoolValue{BoolValue: true}},
+			},
+		}
+		var m SignalFxMetric
+		m.DP.Attributes = attrs
+		So(func() {m.ToDatapoint()}, ShouldPanic)
 	})
 }
 

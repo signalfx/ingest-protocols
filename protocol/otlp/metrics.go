@@ -38,65 +38,119 @@ var (
 	infinityBoundSFxDimValue = float64ToDimValue(math.Inf(1))
 )
 
+// SignalFxMetric is a single NumberDataPoint paired with a metric name such that it contains all of
+// the information needed to convert it to a SignalFx datapoint.  It serves as an intermediate
+// object between an OTLP DataPoint and the SignalFx datapoint.Datapoint type.  Atttribute values
+// must be made into strings and attributes from the resource should be added to the attributes of
+// the DP.
+type SignalFxMetric struct {
+	Name string
+	Type datapoint.MetricType
+	DP   metricsv1.NumberDataPoint
+}
+
+// ToDatapoint converts the SignalFxMetric to a datapoint.Datapoint instance
+func (s *SignalFxMetric) ToDatapoint() *datapoint.Datapoint {
+	return &datapoint.Datapoint{
+		Metric:     s.Name,
+		MetricType: s.Type,
+		Timestamp:  time.Unix(0, int64(s.DP.GetTimeUnixNano())),
+		Dimensions: StringAttributesToDimensions(s.DP.GetAttributes()),
+		Value:      numberToSignalFxValue(&s.DP),
+	}
+}
+
+// StringAttributesToDimensions converts a list of string KVs into a map.
+func StringAttributesToDimensions(attributes []*commonv1.KeyValue) map[string]string {
+	dimensions := make(map[string]string, len(attributes))
+	if len(attributes) == 0 {
+		return dimensions
+	}
+	for _, kv := range attributes {
+		if kv.GetValue().GetValue() == nil {
+			continue
+		}
+		if v, ok := kv.GetValue().GetValue().(*commonv1.AnyValue_StringValue); ok {
+			if v.StringValue == "" {
+				// Don't bother setting things that serialize to nothing
+				continue
+			}
+
+			dimensions[kv.Key] = v.StringValue
+		} else {
+			panic("attributes must be converted to string before using in SignalFxMetric")
+		}
+	}
+	return dimensions
+}
+
 // FromOTLPMetricRequest converts the ResourceMetrics in an incoming request to SignalFx datapoints
 func FromOTLPMetricRequest(md *metricsservicev1.ExportMetricsServiceRequest) []*datapoint.Datapoint {
 	return FromOTLPResourceMetrics(md.GetResourceMetrics())
 }
 
-// FromMetrics converts OTLP ResourceMetrics to SignalFx datapoints.
+// FromOTLPResourceMetrics converts OTLP ResourceMetrics to SignalFx datapoints.
 func FromOTLPResourceMetrics(rms []*metricsv1.ResourceMetrics) []*datapoint.Datapoint {
-	var sfxDps []*datapoint.Datapoint
+	return datapointsFromMetrics(SignalFxMetricsFromOTLPResourceMetrics(rms))
+}
+
+// FromMetric converts a OTLP Metric to SignalFx datapoint(s).
+func FromMetric(m *metricsv1.Metric) []*datapoint.Datapoint {
+	return datapointsFromMetrics(SignalFxMetricsFromOTLPMetric(m))
+}
+
+func datapointsFromMetrics(sfxMetrics []SignalFxMetric) []*datapoint.Datapoint {
+	sfxDps := make([]*datapoint.Datapoint, len(sfxMetrics))
+	for i := range sfxMetrics {
+		sfxDps[i] = sfxMetrics[i].ToDatapoint()
+	}
+	return sfxDps
+}
+
+// SignalFxMetricsFromOTLPResourceMetrics creates the intermediate SignalFxMetric from OTLP metrics
+// instead of going all the way to datapoint.Datapoint.
+func SignalFxMetricsFromOTLPResourceMetrics(rms []*metricsv1.ResourceMetrics) []SignalFxMetric {
+	var sfxDps []SignalFxMetric
 
 	for _, rm := range rms {
 		for _, ilm := range rm.GetInstrumentationLibraryMetrics() {
 			for _, m := range ilm.GetMetrics() {
-				sfxDps = append(sfxDps, FromMetric(m)...)
+				sfxDps = append(sfxDps, SignalFxMetricsFromOTLPMetric(m)...)
 			}
 		}
 
-		extraDimensions := attributesToDimensions(rm.GetResource().GetAttributes())
+		resourceAttrs := stringifyAttributes(rm.GetResource().GetAttributes())
 		for i := range sfxDps {
-			dpDims := sfxDps[i].Dimensions
-			for k, v := range extraDimensions {
-				if _, ok := dpDims[k]; !ok {
-					dpDims[k] = v
-				}
-			}
+			sfxDps[i].DP.Attributes = append(sfxDps[i].DP.Attributes, resourceAttrs...)
 		}
 	}
 
 	return sfxDps
 }
 
-// FromMetric converts a OTLP Metric to SignalFx datapoint(s).
-func FromMetric(m *metricsv1.Metric) []*datapoint.Datapoint {
-	var dps []*datapoint.Datapoint
-
-	basePoint := &datapoint.Datapoint{
-		Metric:     m.GetName(),
-		MetricType: fromMetricTypeToMetricType(m),
-	}
+// SignalFxMetricsFromOTLPMetric converts an OTLP Metric to a SignalFxMetric
+func SignalFxMetricsFromOTLPMetric(m *metricsv1.Metric) []SignalFxMetric {
+	var sfxMetrics []SignalFxMetric
 
 	data := m.GetData()
 	switch data.(type) {
 	case *metricsv1.Metric_Gauge:
-		dps = convertNumberDataPoints(m.GetGauge().GetDataPoints(), basePoint)
+		sfxMetrics = convertNumberDataPoints(m.GetGauge().GetDataPoints(), deriveSignalFxMetricType(m), m.GetName())
 	case *metricsv1.Metric_Sum:
-		dps = convertNumberDataPoints(m.GetSum().GetDataPoints(), basePoint)
+		sfxMetrics = convertNumberDataPoints(m.GetSum().GetDataPoints(), deriveSignalFxMetricType(m), m.GetName())
 	case *metricsv1.Metric_Histogram:
-		dps = convertHistogram(m.GetHistogram().GetDataPoints(), basePoint)
+		sfxMetrics = convertHistogram(m.GetHistogram().GetDataPoints(), deriveSignalFxMetricType(m), m.GetName())
 	case *metricsv1.Metric_ExponentialHistogram:
 		// TODO: Add support for these
 	case *metricsv1.Metric_Summary:
-		dps = convertSummaryDataPoints(m.GetSummary().GetDataPoints(), m.GetName())
+		sfxMetrics = convertSummaryDataPoints(m.GetSummary().GetDataPoints(), m.GetName())
 	}
 
-	return dps
+	return sfxMetrics
 }
 
-func fromMetricTypeToMetricType(m *metricsv1.Metric) datapoint.MetricType {
-	data := m.GetData()
-	switch data.(type) {
+func deriveSignalFxMetricType(m *metricsv1.Metric) datapoint.MetricType {
+	switch m.GetData().(type) {
 	case *metricsv1.Metric_Gauge:
 		return datapoint.Gauge
 
@@ -114,50 +168,46 @@ func fromMetricTypeToMetricType(m *metricsv1.Metric) datapoint.MetricType {
 			return datapoint.Count
 		}
 		return datapoint.Counter
-
-	case *metricsv1.Metric_Summary:
-		return datapoint.Counter
 	}
-
-	return datapoint.Gauge
+	panic("invalid metric type")
 }
 
-func convertNumberDataPoints(in []*metricsv1.NumberDataPoint, basePoint *datapoint.Datapoint) []*datapoint.Datapoint {
-	out := make([]*datapoint.Datapoint, 0, len(in))
-
-	for _, inDp := range in {
-		dp := *basePoint
-		dp.Timestamp = time.Unix(0, int64(inDp.GetTimeUnixNano()))
-		dp.Dimensions = attributesToDimensions(inDp.GetAttributes())
-
-		dp.Value = numberToSignalFxValue(inDp)
-
-		out = append(out, &dp)
+func convertNumberDataPoints(dps []*metricsv1.NumberDataPoint, typ datapoint.MetricType, name string) []SignalFxMetric {
+	out := make([]SignalFxMetric, len(dps))
+	for i, dp := range dps {
+		out[i].Name = name
+		out[i].Type = typ
+		out[i].DP = *dp
+		out[i].DP.Attributes = stringifyAttributes(out[i].DP.Attributes)
 	}
 	return out
 }
 
-func convertHistogram(histDPs []*metricsv1.HistogramDataPoint, basePoint *datapoint.Datapoint) []*datapoint.Datapoint {
-	var out []*datapoint.Datapoint
+func convertHistogram(histDPs []*metricsv1.HistogramDataPoint, typ datapoint.MetricType, name string) []SignalFxMetric {
+	var out []SignalFxMetric
 
 	for _, histDP := range histDPs {
-		attrDims := attributesToDimensions(histDP.GetAttributes())
-		ts := time.Unix(0, int64(histDP.GetTimeUnixNano()))
+		stringAttrs := stringifyAttributes(histDP.GetAttributes())
 
-		countDP := *basePoint
-		countDP.Metric = basePoint.Metric + "_count"
-		countDP.Timestamp = ts
-		countDP.Dimensions = attrDims
-		count := int64(histDP.GetCount())
-		countDP.Value = datapoint.NewIntValue(count)
+		countPt := SignalFxMetric{
+			Name: name + "_count",
+			Type: typ,
+		}
+		c := int64(histDP.GetCount())
+		countPt.DP.Attributes = stringAttrs
+		countPt.DP.TimeUnixNano = histDP.GetTimeUnixNano()
+		countPt.DP.Value = &metricsv1.NumberDataPoint_AsInt{AsInt: c}
 
-		sumDP := *basePoint
-		sumDP.Timestamp = ts
-		sumDP.Dimensions = attrDims
+		sumPt := SignalFxMetric{
+			Name: name,
+			Type: typ,
+		}
 		sum := histDP.GetSum()
-		sumDP.Value = datapoint.NewFloatValue(sum)
+		sumPt.DP.Attributes = stringAttrs
+		sumPt.DP.TimeUnixNano = histDP.GetTimeUnixNano()
+		sumPt.DP.Value = &metricsv1.NumberDataPoint_AsDouble{AsDouble: sum}
 
-		out = append(out, &countDP, &sumDP)
+		out = append(out, countPt, sumPt)
 
 		bounds := histDP.GetExplicitBounds()
 		counts := histDP.GetBucketCounts()
@@ -173,16 +223,24 @@ func convertHistogram(histDPs []*metricsv1.HistogramDataPoint, basePoint *datapo
 			if j < len(bounds) {
 				bound = float64ToDimValue(bounds[j])
 			}
+			dp := SignalFxMetric{
+				Name: name + "_bucket",
+				Type: typ,
+			}
+			dp.DP = metricsv1.NumberDataPoint{
+				Attributes: append(stringAttrs, &commonv1.KeyValue{
+					Key: upperBoundDimensionKey,
+					Value: &commonv1.AnyValue{
+						Value: &commonv1.AnyValue_StringValue{
+							StringValue: bound,
+						},
+					},
+				}),
+				TimeUnixNano: histDP.GetTimeUnixNano(),
+				Value:        &metricsv1.NumberDataPoint_AsInt{AsInt: int64(c)},
+			}
 
-			dp := *basePoint
-			dp.Metric = basePoint.Metric + "_bucket"
-			dp.Timestamp = ts
-			dp.Dimensions = mergeStringMaps(attrDims, map[string]string{
-				upperBoundDimensionKey: bound,
-			})
-			dp.Value = datapoint.NewIntValue(int64(c))
-
-			out = append(out, &dp)
+			out = append(out, dp)
 		}
 	}
 
@@ -192,68 +250,75 @@ func convertHistogram(histDPs []*metricsv1.HistogramDataPoint, basePoint *datapo
 func convertSummaryDataPoints(
 	in []*metricsv1.SummaryDataPoint,
 	name string,
-) []*datapoint.Datapoint {
-	out := make([]*datapoint.Datapoint, 0, len(in))
+) []SignalFxMetric {
+	out := make([]SignalFxMetric, 0, len(in)*5)
 
 	for _, inDp := range in {
-		dims := attributesToDimensions(inDp.GetAttributes())
-		ts := time.Unix(0, int64(inDp.GetTimeUnixNano()))
+		stringAttrs := stringifyAttributes(inDp.GetAttributes())
 
-		countPt := datapoint.Datapoint{
-			Metric:     name + "_count",
-			Timestamp:  ts,
-			Dimensions: dims,
-			MetricType: datapoint.Counter,
+		countPt := SignalFxMetric{
+			Name: name + "_count",
+			Type: datapoint.Counter,
 		}
 		c := int64(inDp.GetCount())
-		countPt.Value = datapoint.NewIntValue(c)
-		out = append(out, &countPt)
+		countPt.DP.Attributes = stringAttrs
+		countPt.DP.TimeUnixNano = inDp.GetTimeUnixNano()
+		countPt.DP.Value = &metricsv1.NumberDataPoint_AsInt{AsInt: c}
+		out = append(out, countPt)
 
-		sumPt := datapoint.Datapoint{
-			Metric:     name,
-			Timestamp:  ts,
-			Dimensions: dims,
-			MetricType: datapoint.Counter,
+		sumPt := SignalFxMetric{
+			Name: name,
+			Type: datapoint.Counter,
 		}
 		sum := inDp.GetSum()
-		sumPt.Value = datapoint.NewFloatValue(sum)
-		out = append(out, &sumPt)
+		sumPt.DP.Attributes = stringAttrs
+		sumPt.DP.TimeUnixNano = inDp.GetTimeUnixNano()
+		sumPt.DP.Value = &metricsv1.NumberDataPoint_AsDouble{AsDouble: sum}
+		out = append(out, sumPt)
 
 		qvs := inDp.GetQuantileValues()
 		for _, qv := range qvs {
-			qPt := datapoint.Datapoint{
-				Metric:    name + "_quantile",
-				Timestamp: ts,
-				Dimensions: mergeStringMaps(dims, map[string]string{
-					"quantile": strconv.FormatFloat(qv.GetQuantile(), 'f', -1, 64),
-				}),
-				MetricType: datapoint.Gauge,
+			qPt := SignalFxMetric{
+				Name: name + "_quantile",
+				Type: datapoint.Gauge,
 			}
-			qPt.Value = datapoint.NewFloatValue(qv.GetValue())
-			out = append(out, &qPt)
+			qPt.DP = metricsv1.NumberDataPoint{
+				Attributes: append(stringAttrs, &commonv1.KeyValue{
+					Key: "quantile",
+					Value: &commonv1.AnyValue{
+						Value: &commonv1.AnyValue_StringValue{
+							StringValue: strconv.FormatFloat(qv.GetQuantile(), 'f', -1, 64),
+						},
+					},
+				}),
+				TimeUnixNano: inDp.GetTimeUnixNano(),
+				Value:        &metricsv1.NumberDataPoint_AsDouble{AsDouble: qv.GetValue()},
+			}
+
+			out = append(out, qPt)
 		}
 	}
 	return out
 }
 
-func attributesToDimensions(attributes []*commonv1.KeyValue) map[string]string {
-	dimensions := make(map[string]string, len(attributes))
-	if len(attributes) == 0 {
-		return dimensions
-	}
-	for _, kv := range attributes {
-		v := stringifyAnyValue(kv.GetValue())
-		if v == "" {
-			// Don't bother setting things that serialize to nothing
-			continue
+func stringifyAttributes(attributes []*commonv1.KeyValue) []*commonv1.KeyValue {
+	out := make([]*commonv1.KeyValue, len(attributes))
+	for i, kv := range attributes {
+		out[i] = &commonv1.KeyValue{
+			Key: attributes[i].Key,
+			Value: &commonv1.AnyValue{
+				Value: &commonv1.AnyValue_StringValue{
+					StringValue: StringifyAnyValue(kv.GetValue()),
+				},
+			},
 		}
-
-		dimensions[kv.Key] = v
 	}
-	return dimensions
+	return out
 }
 
-func stringifyAnyValue(a *commonv1.AnyValue) string {
+// StringifyAnyValue converts an AnyValue to a string.  KVLists and Arrays get recursively JSON
+// marshalled.
+func StringifyAnyValue(a *commonv1.AnyValue) string {
 	var v string
 	if a == nil {
 		return ""
