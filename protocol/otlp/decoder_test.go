@@ -53,7 +53,7 @@ func TestDecoder(t *testing.T) {
 			var msg metricsservicev1.ExportMetricsServiceRequest
 			msg.ResourceMetrics = []*metricsv1.ResourceMetrics{
 				{
-					InstrumentationLibraryMetrics: []*metricsv1.InstrumentationLibraryMetrics{
+					ScopeMetrics: []*metricsv1.ScopeMetrics{
 						{
 							Metrics: []*metricsv1.Metric{
 								{
