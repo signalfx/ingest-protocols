@@ -18,6 +18,7 @@
 package otlp
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"math"
 	"strconv"
@@ -327,6 +328,9 @@ func StringifyAnyValue(a *commonv1.AnyValue) string {
 	case *commonv1.AnyValue_StringValue:
 		v = a.GetStringValue()
 
+	case *commonv1.AnyValue_BytesValue:
+		v = base64.StdEncoding.EncodeToString(a.GetBytesValue())
+
 	case *commonv1.AnyValue_BoolValue:
 		v = strconv.FormatBool(a.GetBoolValue())
 
@@ -352,6 +356,9 @@ func anyValueToRaw(a *commonv1.AnyValue) interface{} {
 	switch a.GetValue().(type) {
 	case *commonv1.AnyValue_StringValue:
 		v = a.GetStringValue()
+
+	case *commonv1.AnyValue_BytesValue:
+		v = a.GetBytesValue()
 
 	case *commonv1.AnyValue_BoolValue:
 		v = a.GetBoolValue()
