@@ -657,6 +657,7 @@ func TestAttributesToDimensions(t *testing.T) {
 						{Key: "k3", Value: nil},
 						{Key: "k4", Value: &commonv1.AnyValue{Value: &commonv1.AnyValue_DoubleValue{DoubleValue: 40.3}}},
 						{Key: "k5", Value: &commonv1.AnyValue{Value: &commonv1.AnyValue_IntValue{IntValue: 41}}},
+						{Key: "k6", Value: &commonv1.AnyValue{Value: &commonv1.AnyValue_BytesValue{BytesValue: []byte("n2")}}},
 					}}}},
 			},
 			{
@@ -671,6 +672,10 @@ func TestAttributesToDimensions(t *testing.T) {
 				Key:   "j",
 				Value: &commonv1.AnyValue{Value: nil},
 			},
+			{
+				Key: "k",
+				Value: &commonv1.AnyValue{Value: &commonv1.AnyValue_BytesValue{BytesValue: []byte("to boldly go")}},
+			},
 		}
 
 		dimKVs := stringifyAttributes(attrs)
@@ -682,8 +687,10 @@ func TestAttributesToDimensions(t *testing.T) {
 			"d": "44",
 			"e": "45.1",
 			"f": `["n1","n2"]`,
-			"g": `{"k1":"n1","k2":false,"k3":null,"k4":40.3,"k5":41}`,
+			"g": `{"k1":"n1","k2":false,"k3":null,"k4":40.3,"k5":41,"k6":"bjI="}`,
 			"i": "0",
+			// No entry for "j" because it's nil and would be skipped by ToDatapoint()
+			"k": "dG8gYm9sZGx5IGdv",
 		})
 	})
 
