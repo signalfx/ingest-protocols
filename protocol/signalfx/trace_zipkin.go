@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"reflect"
 	"strconv"
 	"strings"
 
@@ -96,7 +95,7 @@ func (is *InputSpan) JaegerFromZipkinV2(sm *spanfilter.Map) *jaegerpb.Span {
 	}
 
 	var err error
-	var span = &jaegerpb.Span{Process: &jaegerpb.Process{}}
+	span := &jaegerpb.Span{Process: &jaegerpb.Process{}}
 
 	span.SpanID, err = jaegerpb.SpanIDFromString(is.ID)
 	if err != nil {
@@ -503,7 +502,7 @@ func (sb *spanBuilder) convertToTagOnSpan(currentSpan *trace.Span, ba *signalfxf
 	case int8, int16, int32, int64, uint8, uint16, uint32, uint64:
 		currentSpan.Tags[*ba.Key] = fmt.Sprintf("%d", val)
 	default:
-		fmt.Printf("invalid binary annotation type of %s, for key %s for span %s\n", reflect.TypeOf(val), *ba.Key, *currentSpan.Name)
+		return
 	}
 }
 

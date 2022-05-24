@@ -11,7 +11,7 @@ import (
 	. "github.com/smartystreets/goconvey/convey"
 )
 
-var errReadErr = errors.New("could not read")
+var errRead = errors.New("could not read")
 
 type testReader struct {
 	content []byte
@@ -42,10 +42,10 @@ func TestReadFromRequest(t *testing.T) {
 		})
 
 		Convey("bad read", func() {
-			reader.err = errReadErr
+			reader.err = errRead
 			req.Body = io.NopCloser(reader)
 			err := ReadFromRequest(out, &req, log.Discard)
-			So(err, ShouldEqual, errReadErr)
+			So(err, ShouldEqual, errRead)
 		})
 	})
 }

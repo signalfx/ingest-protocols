@@ -33,6 +33,7 @@ var validRegexConfig = `{
 }`
 
 func getRegexData(t *testing.T, data string) map[string]interface{} {
+	t.Helper()
 	dat := make(map[string]interface{})
 	err := json.Unmarshal([]byte(data), &dat)
 	assert.NoError(t, err)
@@ -40,6 +41,7 @@ func getRegexData(t *testing.T, data string) map[string]interface{} {
 }
 
 func getRegexDeconstructor(t *testing.T) MetricDeconstructor {
+	t.Helper()
 	m, err := regexJSONLoader(getRegexData(t, validRegexConfig))
 	assert.NoError(t, err)
 	return m
@@ -146,7 +148,7 @@ func TestRegexParser(t *testing.T) {
 }
 
 func TestRegexFallback(t *testing.T) {
-	var fallback = `{
+	fallback := `{
   "FallbackDeconstructor":"nil",
   "MetricRules": []
 }`
@@ -163,7 +165,7 @@ func TestRegexFallback(t *testing.T) {
 			})
 		})
 	})
-	var badFallback = `{
+	badFallback := `{
   "FallbackDeconstructor":"blarg",
   "MetricRules": []
 }`
@@ -175,7 +177,7 @@ func TestRegexFallback(t *testing.T) {
 			So(err.Error(), ShouldEqual, "unable to load metric deconstructor by the name of blarg")
 		})
 	})
-	var badFallbackConfig = `{
+	badFallbackConfig := `{
   "FallbackDeconstructor": "commakeys",
   "FallbackDeconstructorConfig": "blarg",
   "MetricRules": []
@@ -191,7 +193,7 @@ func TestRegexFallback(t *testing.T) {
 }
 
 func TestBadRegexConfig(t *testing.T) {
-	var noMetricName = `{
+	noMetricName := `{
   "MetricRules": [
 	{
 	  "Regex": ".*",
@@ -207,7 +209,7 @@ func TestBadRegexConfig(t *testing.T) {
 			So(err.Error(), ShouldEqual, "cannot parse configured MetricType of blarg")
 		})
 	})
-	var invalidMapToObject = `{
+	invalidMapToObject := `{
   "MetricRules": [
 	{
 	  "Regex": ".*",
@@ -231,7 +233,7 @@ func TestBadRegexConfig(t *testing.T) {
 			So(err.Error(), ShouldEqual, "json: unsupported type: func()")
 		})
 	})
-	var invalidCompile = `{
+	invalidCompile := `{
   "MetricRules": [
 	{
 	  "Regex": "[abc"

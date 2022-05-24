@@ -11,8 +11,7 @@ import (
 	. "github.com/smartystreets/goconvey/convey"
 )
 
-type end struct {
-}
+type end struct{}
 
 func (e *end) AddSpans(ctx context.Context, spans []*trace.Span) error {
 	return nil
@@ -27,7 +26,7 @@ func (e *end) AddEvents(ctx context.Context, events []*event.Event) error {
 }
 
 func Test(t *testing.T) {
-	var cases = []struct {
+	cases := []struct {
 		desc       string
 		rules      []string
 		inputSpan  *trace.Span
@@ -50,8 +49,10 @@ func Test(t *testing.T) {
 		},
 		{
 			desc: "test exit early",
-			rules: []string{`^\/api\/v1\/document\/(?P<documentId>.*)\/update$`,
-				`^\/api\/(?P<version>.*)\/document\/(?P<documentId>.*)\/update$`},
+			rules: []string{
+				`^\/api\/v1\/document\/(?P<documentId>.*)\/update$`,
+				`^\/api\/(?P<version>.*)\/document\/(?P<documentId>.*)\/update$`,
+			},
 			inputSpan:  &trace.Span{Name: pointer.String("/api/v1/document/321083210/update")},
 			outputSpan: &trace.Span{Name: pointer.String("/api/v1/document/{documentId}/update"), Tags: map[string]string{"documentId": "321083210"}},
 			exitEarly:  true,
@@ -73,7 +74,6 @@ func Test(t *testing.T) {
 			})
 		}
 	})
-
 }
 
 func Benchmark(b *testing.B) {

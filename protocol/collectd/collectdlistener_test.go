@@ -190,7 +190,7 @@ func TestCollectDListener(t *testing.T) {
 		client := &http.Client{}
 		baseURL := fmt.Sprintf("http://%s/post-collectd", listener.server.Addr)
 		Convey("Should expose health check", func() {
-			req, err := http.NewRequest("GET", fmt.Sprintf("http://%s/healthz", listener.server.Addr), nil)
+			req, err := http.NewRequestWithContext(context.Background(), "GET", fmt.Sprintf("http://%s/healthz", listener.server.Addr), nil)
 			So(err, ShouldBeNil)
 			resp, err := client.Do(req)
 			So(err, ShouldBeNil)
@@ -202,7 +202,7 @@ func TestCollectDListener(t *testing.T) {
 			var datapoints []*datapoint.Datapoint
 			sendRecvData := func() {
 				sendTo.Resize(10)
-				req, err := http.NewRequest("POST", baseURL, strings.NewReader(testCollectdBody))
+				req, err := http.NewRequestWithContext(context.Background(), "POST", baseURL, strings.NewReader(testCollectdBody))
 				So(err, ShouldBeNil)
 				req.Header.Set("Content-Type", "application/json")
 				resp, err := client.Do(req)
@@ -234,7 +234,7 @@ func TestCollectDListener(t *testing.T) {
 			})
 		})
 		Convey("should return errors on invalid data", func() {
-			req, err := http.NewRequest("POST", fmt.Sprintf("http://%s/post-collectd", listener.server.Addr), bytes.NewBufferString("{invalid"))
+			req, err := http.NewRequestWithContext(context.Background(), "POST", fmt.Sprintf("http://%s/post-collectd", listener.server.Addr), bytes.NewBufferString("{invalid"))
 			So(err, ShouldBeNil)
 			req.Header.Set("Content-Type", "application/json")
 
@@ -270,7 +270,7 @@ func BenchmarkCollectdListener(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		writter := httptest.NewRecorder()
 		body := strings.NewReader(largerCollectdBody)
-		req, _ := http.NewRequest("GET", "http://example.com/collectd", body)
+		req, _ := http.NewRequestWithContext(context.Background(), "GET", "http://example.com/collectd", body)
 		req.Header.Add("Content-type", "application/json")
 		b.StartTimer()
 		c.ServeHTTPC(ctx, writter, req)

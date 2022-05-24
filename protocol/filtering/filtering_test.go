@@ -5,7 +5,6 @@ import (
 
 	"github.com/signalfx/golib/v3/datapoint"
 	"github.com/signalfx/golib/v3/datapoint/dptest"
-
 	. "github.com/smartystreets/goconvey/convey"
 )
 
@@ -14,8 +13,10 @@ type TestFilteredForwarder struct {
 }
 
 func Test(t *testing.T) {
-	var imNotAMatcher = "im.not.a.matcher"
-	var cpuIdleString = "cpu.idle"
+	var (
+		imNotAMatcher = "im.not.a.matcher"
+		cpuIdleString = "cpu.idle"
+	)
 
 	Convey("bad regexes throw errors", t, func() {
 		filters := FilterObj{

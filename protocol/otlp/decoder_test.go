@@ -18,12 +18,12 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-var errReadErr = errors.New("could not read")
+var errRead = errors.New("could not read")
 
 type errorReader struct{}
 
 func (errorReader *errorReader) Read([]byte) (int, error) {
-	return 0, errReadErr
+	return 0, errRead
 }
 
 func TestDecoder(t *testing.T) {
@@ -37,7 +37,7 @@ func TestDecoder(t *testing.T) {
 			}
 			req.ContentLength = 1
 			ctx := context.Background()
-			So(decoder.Read(ctx, req), ShouldEqual, errReadErr)
+			So(decoder.Read(ctx, req), ShouldEqual, errRead)
 		})
 
 		Convey("Bad request content", func() {
@@ -62,7 +62,7 @@ func TestDecoder(t *testing.T) {
 										Gauge: &metricsv1.Gauge{
 											DataPoints: []*metricsv1.NumberDataPoint{
 												{
-													Attributes:       []*commonv1.KeyValue{},
+													Attributes:        []*commonv1.KeyValue{},
 													StartTimeUnixNano: 1000,
 													TimeUnixNano:      1000,
 													Value:             &metricsv1.NumberDataPoint_AsInt{AsInt: 4},

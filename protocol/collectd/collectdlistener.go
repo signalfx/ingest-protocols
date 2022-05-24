@@ -1,18 +1,15 @@
 package collectd
 
 import (
+	"context"
 	"fmt"
 	"net"
 	"net/http"
+	"strings"
 	"sync/atomic"
 	"time"
 
 	"github.com/gorilla/mux"
-
-	"strings"
-
-	"context"
-
 	"github.com/mailru/easyjson"
 	"github.com/signalfx/golib/v3/datapoint"
 	"github.com/signalfx/golib/v3/datapoint/dpsink"

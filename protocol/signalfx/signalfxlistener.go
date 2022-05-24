@@ -1,14 +1,13 @@
 package signalfx
 
 import (
+	"context"
 	"encoding/json"
 	"net"
 	"net/http"
 	"sync"
 	"sync/atomic"
 	"time"
-
-	"context"
 
 	"github.com/gorilla/mux"
 	sfxmodel "github.com/signalfx/com_signalfx_metrics_protobuf/model"
@@ -57,7 +56,7 @@ func (streamer *ListenerServer) DebugDatapoints() []*datapoint.Datapoint {
 
 // DefaultDatapoints returns datapoints that should always be reported from the listener
 func (streamer *ListenerServer) DefaultDatapoints() []*datapoint.Datapoint {
-	var dps = make([]*datapoint.Datapoint, 0, 1)
+	dps := make([]*datapoint.Datapoint, 0, 1)
 	if streamer.counter != nil {
 		dps = append(dps, streamer.counter.Datapoints()...)
 	}

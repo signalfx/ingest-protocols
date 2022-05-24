@@ -1,13 +1,11 @@
 package csv
 
 import (
-	"os"
-
-	"sync"
-
 	"context"
 	"encoding/json"
 	"net/http"
+	"os"
+	"sync"
 	"sync/atomic"
 
 	"github.com/signalfx/golib/v3/datapoint"
@@ -139,7 +137,7 @@ func (f *Forwarder) Close() error {
 // NewForwarder creates a new filename forwarder
 func NewForwarder(config *Config) (*Forwarder, error) {
 	config = pointer.FillDefaultFrom(config, defaultConfig).(*Config)
-	file, err := os.OpenFile(*config.Filename, os.O_WRONLY|os.O_TRUNC|os.O_CREATE, os.FileMode(0600))
+	file, err := os.OpenFile(*config.Filename, os.O_WRONLY|os.O_TRUNC|os.O_CREATE, 0o600)
 	if err != nil {
 		return nil, errors.Annotatef(err, "cannot open file %s", *config.Filename)
 	}

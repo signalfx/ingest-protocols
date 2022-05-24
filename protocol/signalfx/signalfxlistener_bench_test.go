@@ -108,7 +108,6 @@ func BenchmarkJSONDecoderV2_ReadInt(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		err := dec.Read(ctx, req)
 		if err != nil {
-			fmt.Println(i)
 			b.Fatal(err)
 		}
 		req = &http.Request{
@@ -137,7 +136,6 @@ func BenchmarkJSONDecoderV2_ReadFloat(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		err := dec.Read(ctx, req)
 		if err != nil {
-			fmt.Println(i)
 			b.Fatal(err)
 		}
 		req = &http.Request{
@@ -171,7 +169,6 @@ func BenchmarkJSONDecoderV1_Read(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		err := dec.Read(ctx, req)
 		if err != nil {
-			fmt.Println(i)
 			b.Fatal(err)
 		}
 		req = &http.Request{
@@ -203,7 +200,6 @@ func BenchmarkJSONEVentDecoderV2_Read(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		err := dec.Read(ctx, req)
 		if err != nil {
-			fmt.Println(i)
 			b.Fatal(err)
 		}
 		req = &http.Request{
@@ -233,7 +229,6 @@ func BenchmarkHTTPSink_AddSpans(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		err := dec.Read(ctx, req)
 		if err != nil {
-			fmt.Println(i)
 			b.Fatal(err)
 		}
 		req = &http.Request{

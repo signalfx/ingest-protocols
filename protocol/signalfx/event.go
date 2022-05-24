@@ -37,8 +37,8 @@ func (decoder *ProtobufEventDecoderV2) Read(ctx context.Context, req *http.Reque
 		return err
 	}
 	evts := make([]*event.Event, 0, len(msg.GetEvents()))
-	for _, protoDb := range msg.GetEvents() {
-		if e, err1 := NewProtobufEvent(protoDb); err1 == nil {
+	for _, protoDP := range msg.GetEvents() {
+		if e, err1 := NewProtobufEvent(protoDP); err1 == nil {
 			evts = append(evts, e)
 		}
 	}
@@ -71,7 +71,7 @@ func (decoder *JSONEventDecoderV2) Read(ctx context.Context, req *http.Request) 
 		if pbcat, ok := sfxmodel.EventCategory_value[*jsonEvent.Category]; ok {
 			cat = event.Category(pbcat)
 		}
-		evt := event.NewWithProperties(jsonEvent.EventType, cat, jsonEvent.Dimensions, jsonEvent.Properties, fromTs(*jsonEvent.Timestamp))
+		evt := event.NewWithProperties(jsonEvent.EventType, cat, jsonEvent.Dimensions, jsonEvent.Properties, fromTS(*jsonEvent.Timestamp))
 		evts = append(evts, evt)
 	}
 	return decoder.Sink.AddEvents(ctx, evts)

@@ -103,7 +103,7 @@ func TestListener(t *testing.T) {
 		client := &http.Client{}
 		baseURL := fmt.Sprintf("http://%s/write", listener.server.Addr)
 		Convey("Should expose health check", func() {
-			req, err := http.NewRequest("GET", fmt.Sprintf("http://%s/healthz", listener.server.Addr), nil)
+			req, err := http.NewRequestWithContext(context.Background(), "GET", fmt.Sprintf("http://%s/healthz", listener.server.Addr), nil)
 			So(err, ShouldBeNil)
 			resp, err := client.Do(req)
 			So(err, ShouldBeNil)
@@ -150,12 +150,6 @@ func TestListener(t *testing.T) {
 	})
 }
 
-type errRead struct{}
-
-func (e *errRead) Read(p []byte) (int, error) {
-	panic("blarg")
-}
-
 func TestBad(t *testing.T) {
 	Convey("test listener", t, func() {
 		callCount := int64(0)
@@ -173,7 +167,7 @@ func TestBad(t *testing.T) {
 		baseURL := fmt.Sprintf("http://%s/write", listener.server.Addr)
 		sendTo.Resize(10)
 		Convey("Should bork on nil data", func() {
-			req, err := http.NewRequest("POST", baseURL, nil)
+			req, err := http.NewRequestWithContext(context.Background(), "POST", baseURL, nil)
 			So(err, ShouldBeNil)
 			req.Header.Set("Content-Type", "application/x-protobuf")
 			resp, err := client.Do(req)
@@ -185,7 +179,7 @@ func TestBad(t *testing.T) {
 			listener.decoder.readAll = func(r io.Reader) ([]byte, error) {
 				return nil, errors.New("nope")
 			}
-			req, err := http.NewRequest("POST", baseURL, bytes.NewReader(getPayload(nil)))
+			req, err := http.NewRequestWithContext(context.Background(), "POST", baseURL, bytes.NewReader(getPayload(nil)))
 			So(err, ShouldBeNil)
 			req.Header.Set("Content-Type", "application/x-protobuf")
 			resp, err := client.Do(req)
@@ -196,7 +190,7 @@ func TestBad(t *testing.T) {
 		Convey("Should bork on bad data", func() {
 			jeff := []byte("blarg")
 			osnap := snappy.Encode(nil, jeff)
-			req, err := http.NewRequest("POST", baseURL, bytes.NewReader(osnap))
+			req, err := http.NewRequestWithContext(context.Background(), "POST", baseURL, bytes.NewReader(osnap))
 			So(err, ShouldBeNil)
 			req.Header.Set("Content-Type", "application/x-protobuf")
 			resp, err := client.Do(req)
@@ -207,7 +201,7 @@ func TestBad(t *testing.T) {
 		Convey("count bad datapoint", func() {
 			incoming := getWriteRequest()
 			incoming.Timeseries[0].Labels = []*prompb.Label{}
-			req, err := http.NewRequest("POST", baseURL, bytes.NewReader(getPayload(incoming)))
+			req, err := http.NewRequestWithContext(context.Background(), "POST", baseURL, bytes.NewReader(getPayload(incoming)))
 			So(err, ShouldBeNil)
 			req.Header.Set("Content-Type", "application/x-protobuf")
 			resp, err := client.Do(req)
@@ -220,7 +214,7 @@ func TestBad(t *testing.T) {
 		})
 		Convey("sink throws an error", func() {
 			listener.decoder.SendTo = new(errSink)
-			req, err := http.NewRequest("POST", baseURL, bytes.NewReader(getPayload(nil)))
+			req, err := http.NewRequestWithContext(context.Background(), "POST", baseURL, bytes.NewReader(getPayload(nil)))
 			So(err, ShouldBeNil)
 			req.Header.Set("Content-Type", "application/x-protobuf")
 			resp, err := client.Do(req)

@@ -21,6 +21,7 @@ type httpMetricDecoder struct {
 	buffs  sync.Pool
 }
 
+// NewHTTPMetricDecoder decodes OTLP metrics and puts them onto the provided sink.
 func NewHTTPMetricDecoder(sink dpsink.Sink, logger log.Logger) signalfx.ErrorReader {
 	return &httpMetricDecoder{
 		sink:   sink,
@@ -48,5 +49,5 @@ func (d *httpMetricDecoder) Read(ctx context.Context, req *http.Request) (err er
 	if len(dps) > 0 {
 		err = d.sink.AddDatapoints(ctx, dps)
 	}
-	return nil
+	return err
 }

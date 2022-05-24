@@ -126,7 +126,7 @@ func NewForwarder(conf *ForwarderConfig) (ret *Forwarder, err error) {
 	}
 	err = ret.Setup(conf.Filters)
 	if err == nil {
-		return ret, err
+		return ret, nil
 	}
 	return nil, err
 }

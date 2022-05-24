@@ -12,8 +12,7 @@ import (
 	. "github.com/smartystreets/goconvey/convey"
 )
 
-type end struct {
-}
+type end struct{}
 
 func (e *end) AddSpans(ctx context.Context, spans []*trace.Span) error {
 	return nil
@@ -28,7 +27,7 @@ func (e *end) AddEvents(ctx context.Context, events []*event.Event) error {
 }
 
 func Test(t *testing.T) {
-	var cases = []struct {
+	cases := []struct {
 		desc       string
 		inputSpan  *trace.Span
 		outputSpan *trace.Span

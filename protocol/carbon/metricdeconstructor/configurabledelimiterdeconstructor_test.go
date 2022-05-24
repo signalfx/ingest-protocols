@@ -1,12 +1,10 @@
 package metricdeconstructor
 
 import (
-	"testing"
-
 	"encoding/json"
 	"fmt"
-
 	"strings"
+	"testing"
 
 	"github.com/signalfx/golib/v3/datapoint"
 	. "github.com/smartystreets/goconvey/convey"
@@ -53,6 +51,7 @@ var validConfig = `{
 }`
 
 func getData(t *testing.T, data string) map[string]interface{} {
+	t.Helper()
 	dat := make(map[string]interface{})
 	err := json.Unmarshal([]byte(data), &dat)
 	assert.NoError(t, err)
@@ -60,6 +59,7 @@ func getData(t *testing.T, data string) map[string]interface{} {
 }
 
 func getDeconstructor(t *testing.T) MetricDeconstructor {
+	t.Helper()
 	m, err := delimiterJSONLoader(getData(t, validConfig))
 	assert.NoError(t, err)
 	return m
@@ -242,7 +242,7 @@ func TestParser(t *testing.T) {
 }
 
 func TestFallbackNil(t *testing.T) {
-	var fallback = `{
+	fallback := `{
   "FallbackDeconstructor":"nil",
   "MetricRules": []
 }`
@@ -262,7 +262,7 @@ func TestFallbackNil(t *testing.T) {
 }
 
 func TestBadConfigDifferentSizes(t *testing.T) {
-	var differentSizes = `{
+	differentSizes := `{
   "MetricRules": [
 	{
 	  "MetricPath": "*.*.*.*",
@@ -281,7 +281,7 @@ func TestBadConfigDifferentSizes(t *testing.T) {
 }
 
 func TestBadConfigNoMetricName(t *testing.T) {
-	var noMetricName = `{
+	noMetricName := `{
   "MetricRules": [
 	{
 	  "MetricPath": "*.*.*",
@@ -300,7 +300,7 @@ func TestBadConfigNoMetricName(t *testing.T) {
 }
 
 func TestBadConfigBadMetricType(t *testing.T) {
-	var badMetricType = `{
+	badMetricType := `{
   "MetricRules": [
 	{
 	  "MetricPath": "*.*.*",
@@ -320,7 +320,7 @@ func TestBadConfigBadMetricType(t *testing.T) {
 }
 
 func TestBadFallbackDeconstructor(t *testing.T) {
-	var badFallback = `{
+	badFallback := `{
   "FallbackDeconstructor": "blarg",
   "MetricRules": [
 	{
@@ -340,7 +340,7 @@ func TestBadFallbackDeconstructor(t *testing.T) {
 }
 
 func TestBadFallbackDeconstructorConfig(t *testing.T) {
-	var badFallback = `{
+	badFallback := `{
   "FallbackDeconstructor": "commakeys",
   "FallbackDeconstructorConfig": "blarg",
   "MetricRules": [
@@ -361,7 +361,7 @@ func TestBadFallbackDeconstructorConfig(t *testing.T) {
 }
 
 func TestInvalidMapToObject(t *testing.T) {
-	var invalidMapToObject = `{
+	invalidMapToObject := `{
   "MetricRules": [
 	{
 	  "MetricPath": 4,
@@ -380,7 +380,7 @@ func TestInvalidMapToObject(t *testing.T) {
 }
 
 func TestNoType(t *testing.T) {
-	var noType = `{
+	noType := `{
   "TypeRules": [
     {
       "StartsWith":"counter",
@@ -400,7 +400,7 @@ func TestNoType(t *testing.T) {
 }
 
 func TestNoRules(t *testing.T) {
-	var noRules = `{
+	noRules := `{
   "TypeRules": [
     {
       "MetricType": "count"
@@ -419,7 +419,7 @@ func TestNoRules(t *testing.T) {
 }
 
 func TestInvalidType(t *testing.T) {
-	var invalidType = `{
+	invalidType := `{
   "TypeRules": [
     {
       "MetricType": "blarg",
@@ -440,7 +440,7 @@ func TestInvalidType(t *testing.T) {
 }
 
 func TestDuplicateDelimiter(t *testing.T) {
-	var duplicateDelimiter = `{
+	duplicateDelimiter := `{
   "OrDelimiter":".",
   "MetricRules": []
 }`
@@ -455,7 +455,7 @@ func TestDuplicateDelimiter(t *testing.T) {
 }
 
 func TestOverrideEverything(t *testing.T) {
-	var overrideEverything = `{
+	overrideEverything := `{
   "OrDelimiter":"*",
   "NotDelimiter":"-",
   "Delimiter":"%",

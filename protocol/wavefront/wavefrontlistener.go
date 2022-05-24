@@ -3,6 +3,7 @@ package wavefront
 import (
 	"bufio"
 	"context"
+	stderrors "errors"
 	"io"
 	"net"
 	"strconv"
@@ -145,7 +146,6 @@ func getMetricPieces(line string) []string {
 			return false
 		default:
 			return unicode.IsSpace(c)
-
 		}
 	}
 
@@ -241,7 +241,8 @@ func (listener *Listener) startListeningTCP() {
 		}
 		conn, err := listener.psocket.Accept()
 		if err != nil {
-			if netErr, ok := err.(net.Error); ok {
+			var netErr net.Error
+			if ok := stderrors.As(err, &netErr); ok {
 				if netErr.Timeout() || netErr.Temporary() {
 					atomic.AddInt64(&listener.stats.retriedListenErrors, 1)
 					continue

@@ -49,8 +49,10 @@ func (t *TagReplace) AddSpans(ctx context.Context, spans []*trace.Span) error {
 				if ms := r.FindStringSubmatch(oldName); ms != nil {
 					ims := r.FindStringSubmatchIndex(oldName)
 
-					var newName []string
-					var index = 0
+					var (
+						newName []string
+						index   = 0
+					)
 					if s.Tags == nil {
 						s.Tags = map[string]string{}
 					}
@@ -76,7 +78,7 @@ func (t *TagReplace) AddSpans(ctx context.Context, spans []*trace.Span) error {
 
 // New returns you a new TagReplace object
 func New(ruleStrings []string, exitEarly bool, next sink) (*TagReplace, error) {
-	var rules = make([]*regexp.Regexp, 0, len(ruleStrings))
+	rules := make([]*regexp.Regexp, 0, len(ruleStrings))
 	for _, r := range ruleStrings {
 		var err error
 		var rp *regexp.Regexp

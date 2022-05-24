@@ -23,12 +23,12 @@ type SpanTagRemoval struct {
 	next  rmsink
 }
 
-//AddDatapoints is a passthrough
+// AddDatapoints is a passthrough
 func (o *SpanTagRemoval) AddDatapoints(ctx context.Context, points []*datapoint.Datapoint) error {
 	return o.next.AddDatapoints(ctx, points)
 }
 
-//AddEvents is a passthrough
+// AddEvents is a passthrough
 func (o *SpanTagRemoval) AddEvents(ctx context.Context, events []*event.Event) error {
 	return o.next.AddEvents(ctx, events)
 }

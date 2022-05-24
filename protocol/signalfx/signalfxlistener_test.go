@@ -34,12 +34,12 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-var errReadErr = errors.New("could not read")
+var errRead = errors.New("could not read")
 
 type errorReader struct{}
 
 func (errorReader *errorReader) Read([]byte) (int, error) {
-	return 0, errReadErr
+	return 0, errRead
 }
 
 func TestSignalfxProtoDecoders(t *testing.T) {
@@ -50,7 +50,7 @@ func TestSignalfxProtoDecoders(t *testing.T) {
 			}
 			req.ContentLength = 1
 			ctx := context.Background()
-			So(decoder.Read(ctx, req), ShouldEqual, errReadErr)
+			So(decoder.Read(ctx, req), ShouldEqual, errRead)
 		})
 	}
 	Convey("a setup ProtobufDecoderV2", t, func() {
@@ -122,9 +122,10 @@ func TestSignalfxProtobufV1Decoder(t *testing.T) {
 }
 
 func verifyEventRequest(baseURI string, contentType string, path string, body io.Reader, channel *dptest.BasicSink,
-	eventType string, category event.Category, dimensions map[string]string, properties map[string]interface{}, reqErr error) {
+	eventType string, category event.Category, dimensions map[string]string, properties map[string]interface{}, reqErr error,
+) {
 	Convey("given a new request with path "+path, func() {
-		req, err := http.NewRequest("POST", baseURI+path, body)
+		req, err := http.NewRequestWithContext(context.Background(), "POST", baseURI+path, body)
 		if reqErr != nil {
 			Convey("we should get the error provided"+reqErr.Error(), func() {
 				So(err, ShouldNotBeNil)
@@ -288,7 +289,7 @@ func TestSignalfxListener(t *testing.T) {
 		So(listener.Addr(), ShouldNotBeNil)
 		Convey("Should expose health check", func() {
 			client := http.Client{}
-			req, err := http.NewRequest("GET", baseURI+"/healthz", nil)
+			req, err := http.NewRequestWithContext(context.Background(), "GET", baseURI+"/healthz", nil)
 			So(err, ShouldBeNil)
 			resp, err := client.Do(req)
 			So(err, ShouldBeNil)
@@ -396,7 +397,7 @@ func TestSignalfxListener(t *testing.T) {
 
 		trySend := func(body string, contentType string, pathSuffix string) {
 			client := http.Client{}
-			req, err := http.NewRequest("POST", baseURI+pathSuffix, strings.NewReader(body))
+			req, err := http.NewRequestWithContext(context.Background(), "POST", baseURI+pathSuffix, strings.NewReader(body))
 			So(err, ShouldBeNil)
 			req.Header.Add("Content-Type", contentType)
 			resp, err := client.Do(req)
@@ -406,7 +407,7 @@ func TestSignalfxListener(t *testing.T) {
 		}
 		verifyStatusCode := func(body string, contentType string, pathSuffix string, expectedStatusCode int) {
 			client := http.Client{}
-			req, err := http.NewRequest("POST", baseURI+pathSuffix, strings.NewReader(body))
+			req, err := http.NewRequestWithContext(context.Background(), "POST", baseURI+pathSuffix, strings.NewReader(body))
 			So(err, ShouldBeNil)
 			req.Header.Add("Content-Type", contentType)
 			resp, err := client.Do(req)
@@ -558,7 +559,7 @@ func TestSignalfxListener(t *testing.T) {
 		Convey("Lets test some things", func() {
 			verifyStatusCode := func(body string, contentType string, pathSuffix string, expectedStatusCode int) {
 				client := http.Client{}
-				req, err := http.NewRequest("POST", baseURI+pathSuffix, strings.NewReader(body))
+				req, err := http.NewRequestWithContext(context.Background(), "POST", baseURI+pathSuffix, strings.NewReader(body))
 				So(err, ShouldBeNil)
 				req.Header.Add("Content-Type", contentType)
 				resp, err := client.Do(req)
