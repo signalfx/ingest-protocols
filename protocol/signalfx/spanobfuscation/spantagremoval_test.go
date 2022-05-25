@@ -12,8 +12,7 @@ import (
 	. "github.com/smartystreets/goconvey/convey"
 )
 
-type rmend struct {
-}
+type rmend struct{}
 
 func (e *rmend) AddSpans(ctx context.Context, spans []*trace.Span) error {
 	return nil

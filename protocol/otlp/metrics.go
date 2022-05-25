@@ -178,37 +178,49 @@ func convertNumberDataPoints(dps []*metricsv1.NumberDataPoint, typ datapoint.Met
 	for i, dp := range dps {
 		out[i].Name = name
 		out[i].Type = typ
-		out[i].DP = *dp
-		out[i].DP.Attributes = stringifyAttributes(out[i].DP.Attributes)
+		out[i].DP = metricsv1.NumberDataPoint{
+			Attributes:        stringifyAttributes(dp.Attributes),
+			StartTimeUnixNano: dp.StartTimeUnixNano,
+			TimeUnixNano:      dp.TimeUnixNano,
+			Value:             dp.Value,
+		}
 	}
 	return out
 }
 
 func convertHistogram(histDPs []*metricsv1.HistogramDataPoint, typ datapoint.MetricType, name string) []SignalFxMetric {
-	var out []SignalFxMetric
+	biggestCount := 0
+	for _, histDP := range histDPs {
+		c := len(histDP.GetBucketCounts())
+		if c > biggestCount {
+			biggestCount = c
+		}
+	}
 
+	// ensure we are big enough to fit everything
+	out := make([]SignalFxMetric, len(histDPs)*(2+biggestCount))
+
+	i := 0
 	for _, histDP := range histDPs {
 		stringAttrs := stringifyAttributes(histDP.GetAttributes())
 
-		countPt := SignalFxMetric{
-			Name: name + "_count",
-			Type: typ,
-		}
+		countPt := &out[i]
+		countPt.Name = name + "_count"
+		countPt.Type = typ
 		c := int64(histDP.GetCount())
 		countPt.DP.Attributes = stringAttrs
 		countPt.DP.TimeUnixNano = histDP.GetTimeUnixNano()
 		countPt.DP.Value = &metricsv1.NumberDataPoint_AsInt{AsInt: c}
+		i++
 
-		sumPt := SignalFxMetric{
-			Name: name,
-			Type: typ,
-		}
+		sumPt := &out[i]
+		sumPt.Name = name
+		sumPt.Type = typ
 		sum := histDP.GetSum()
 		sumPt.DP.Attributes = stringAttrs
 		sumPt.DP.TimeUnixNano = histDP.GetTimeUnixNano()
 		sumPt.DP.Value = &metricsv1.NumberDataPoint_AsDouble{AsDouble: sum}
-
-		out = append(out, countPt, sumPt)
+		i++
 
 		bounds := histDP.GetExplicitBounds()
 		counts := histDP.GetBucketCounts()
@@ -224,82 +236,80 @@ func convertHistogram(histDPs []*metricsv1.HistogramDataPoint, typ datapoint.Met
 			if j < len(bounds) {
 				bound = float64ToDimValue(bounds[j])
 			}
-			dp := SignalFxMetric{
-				Name: name + "_bucket",
-				Type: typ,
-			}
-			dp.DP = metricsv1.NumberDataPoint{
-				Attributes: append(stringAttrs, &commonv1.KeyValue{
-					Key: upperBoundDimensionKey,
-					Value: &commonv1.AnyValue{
-						Value: &commonv1.AnyValue_StringValue{
-							StringValue: bound,
-						},
-					},
-				}),
-				TimeUnixNano: histDP.GetTimeUnixNano(),
-				Value:        &metricsv1.NumberDataPoint_AsInt{AsInt: int64(c)},
-			}
 
-			out = append(out, dp)
+			dp := &out[i]
+			dp.Name = name + "_bucket"
+			dp.Type = typ
+			dp.DP.Attributes = append(stringAttrs, &commonv1.KeyValue{
+				Key: upperBoundDimensionKey,
+				Value: &commonv1.AnyValue{
+					Value: &commonv1.AnyValue_StringValue{
+						StringValue: bound,
+					},
+				},
+			})
+			dp.DP.TimeUnixNano = histDP.GetTimeUnixNano()
+			dp.DP.Value = &metricsv1.NumberDataPoint_AsInt{AsInt: int64(c)}
+			i++
 		}
 	}
 
-	return out
+	return out[:i]
 }
 
 func convertSummaryDataPoints(
 	in []*metricsv1.SummaryDataPoint,
 	name string,
 ) []SignalFxMetric {
-	out := make([]SignalFxMetric, 0, len(in)*5)
+	biggestCount := 0
+	for _, sumDP := range in {
+		c := len(sumDP.GetQuantileValues())
+		if c > biggestCount {
+			biggestCount = c
+		}
+	}
+	out := make([]SignalFxMetric, len(in)*(2+biggestCount))
 
+	i := 0
 	for _, inDp := range in {
 		stringAttrs := stringifyAttributes(inDp.GetAttributes())
 
-		countPt := SignalFxMetric{
-			Name: name + "_count",
-			Type: datapoint.Counter,
-		}
+		countPt := &out[i]
+		countPt.Name = name + "_count"
+		countPt.Type = datapoint.Counter
 		c := int64(inDp.GetCount())
 		countPt.DP.Attributes = stringAttrs
 		countPt.DP.TimeUnixNano = inDp.GetTimeUnixNano()
 		countPt.DP.Value = &metricsv1.NumberDataPoint_AsInt{AsInt: c}
-		out = append(out, countPt)
+		i++
 
-		sumPt := SignalFxMetric{
-			Name: name,
-			Type: datapoint.Counter,
-		}
-		sum := inDp.GetSum()
+		sumPt := &out[i]
+		sumPt.Name = name
+		sumPt.Type = datapoint.Counter
 		sumPt.DP.Attributes = stringAttrs
 		sumPt.DP.TimeUnixNano = inDp.GetTimeUnixNano()
-		sumPt.DP.Value = &metricsv1.NumberDataPoint_AsDouble{AsDouble: sum}
-		out = append(out, sumPt)
+		sumPt.DP.Value = &metricsv1.NumberDataPoint_AsDouble{AsDouble: inDp.GetSum()}
+		i++
 
 		qvs := inDp.GetQuantileValues()
 		for _, qv := range qvs {
-			qPt := SignalFxMetric{
-				Name: name + "_quantile",
-				Type: datapoint.Gauge,
-			}
-			qPt.DP = metricsv1.NumberDataPoint{
-				Attributes: append(stringAttrs, &commonv1.KeyValue{
-					Key: "quantile",
-					Value: &commonv1.AnyValue{
-						Value: &commonv1.AnyValue_StringValue{
-							StringValue: strconv.FormatFloat(qv.GetQuantile(), 'f', -1, 64),
-						},
+			qPt := &out[i]
+			qPt.Name = name + "_quantile"
+			qPt.Type = datapoint.Gauge
+			qPt.DP.Attributes = append(stringAttrs, &commonv1.KeyValue{
+				Key: "quantile",
+				Value: &commonv1.AnyValue{
+					Value: &commonv1.AnyValue_StringValue{
+						StringValue: strconv.FormatFloat(qv.GetQuantile(), 'f', -1, 64),
 					},
-				}),
-				TimeUnixNano: inDp.GetTimeUnixNano(),
-				Value:        &metricsv1.NumberDataPoint_AsDouble{AsDouble: qv.GetValue()},
-			}
-
-			out = append(out, qPt)
+				},
+			})
+			qPt.DP.TimeUnixNano = inDp.GetTimeUnixNano()
+			qPt.DP.Value = &metricsv1.NumberDataPoint_AsDouble{AsDouble: qv.GetValue()}
+			i++
 		}
 	}
-	return out
+	return out[:i]
 }
 
 func stringifyAttributes(attributes []*commonv1.KeyValue) []*commonv1.KeyValue {
@@ -348,6 +358,7 @@ func StringifyAnyValue(a *commonv1.AnyValue) string {
 	return v
 }
 
+// nolint:gocyclo
 func anyValueToRaw(a *commonv1.AnyValue) interface{} {
 	var v interface{}
 	if a == nil {

@@ -7,5 +7,6 @@ jobs:
     steps:
       - checkout
       - run:
-          name: Verify
-          command: make verify
+          name: Test
+          command: |
+            make gocov test

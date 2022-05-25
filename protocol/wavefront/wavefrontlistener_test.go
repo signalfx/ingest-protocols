@@ -1,7 +1,6 @@
 package wavefront
 
 import (
-	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -12,7 +11,6 @@ import (
 	"github.com/signalfx/golib/v3/datapoint/dptest"
 	"github.com/signalfx/golib/v3/nettest"
 	"github.com/signalfx/golib/v3/pointer"
-
 	. "github.com/smartystreets/goconvey/convey"
 )
 
@@ -85,16 +83,6 @@ func TestFromWavefrontDatapoint(t *testing.T) {
 			}
 		})
 	}
-}
-
-var errDeadline = errors.New("nope")
-
-type undeadlineable struct {
-	net.Conn
-}
-
-func (u *undeadlineable) SetDeadline(t time.Time) error {
-	return errDeadline
 }
 
 func TestWavefrontListenerBadAddr(t *testing.T) {

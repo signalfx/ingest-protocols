@@ -1,15 +1,14 @@
 package dpbuffered
 
 import (
-	"testing"
-	"time"
-
 	"bytes"
 	"context"
+	"errors"
 	"io"
-	"sync"
-
 	"net/http"
+	"sync"
+	"testing"
+	"time"
 
 	"github.com/signalfx/golib/v3/datapoint"
 	"github.com/signalfx/golib/v3/datapoint/dpsink"
@@ -336,7 +335,7 @@ func TestBufferedForwarderMaxTotalDatapoints(t *testing.T) {
 	}
 	found := false
 	for i := 0; i < 100; i++ {
-		if err := bf.AddDatapoints(ctx, datas); err == errDPBufferFull(*config.Name) {
+		if err := bf.AddDatapoints(ctx, datas); errors.Is(err, dpBufferFullError(*config.Name)) {
 			assert.NotEmpty(t, err.Error())
 			found = true
 			break
@@ -369,7 +368,7 @@ func TestBufferedForwarderMaxTotalEvents(t *testing.T) {
 	spans := []*trace.Span{{}, {}}
 	found := false
 	for i := 0; i < 100; i++ {
-		if err := bf.AddEvents(ctx, events); err == errEBufferFull(*config.Name) {
+		if err := bf.AddEvents(ctx, events); errors.Is(err, eBufferFullError(*config.Name)) {
 			assert.NotEmpty(t, err.Error())
 			found = true
 			break
@@ -378,7 +377,7 @@ func TestBufferedForwarderMaxTotalEvents(t *testing.T) {
 	assert.True(t, found, "With small buffer size, I should error out with a full buffer")
 	found = false
 	for i := 0; i < 100; i++ {
-		if err := bf.AddSpans(ctx, spans); err == errTBufferFull(*config.Name) {
+		if err := bf.AddSpans(ctx, spans); errors.Is(err, tBufferFullError(*config.Name)) {
 			assert.NotEmpty(t, err.Error())
 			found = true
 			break

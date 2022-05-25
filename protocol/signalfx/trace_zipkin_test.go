@@ -5,7 +5,6 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
@@ -95,7 +94,6 @@ func BenchmarkZipkinV2TraceDecoder(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		err := decoder.Read(context.Background(), &req)
 		if err != nil {
-			fmt.Println(i)
 			b.Fatal(err)
 		}
 		req = http.Request{
@@ -204,7 +202,7 @@ func TestZipkinTraceDecoder(t *testing.T) {
 		So(err, ShouldBeNil)
 		sm := spanfilter.GetSpanFilterMapFromContext(fs.ctx)
 		So(spanfilter.IsInvalid(sm), ShouldBeTrue)
-		smr := sm.(*spanfilter.Map)
+		smr := sm.(*spanfilter.Map) //nolint:errorlint
 		So(len(smr.Invalid[spanfilter.ZipkinV2BinaryAnnotations]), ShouldEqual, 1)
 		So(spans, ShouldResemble, []*trace.Span{
 			{
@@ -342,7 +340,8 @@ func TestZipkinTraceConversion(t *testing.T) {
 		client := InputSpan{
 			Timestamp: pointer.Float64(1472470996199000),
 			Duration:  pointer.Float64(207000),
-			Span: trace.Span{TraceID: "7180c278b62e8f6a216a2aea45d08fc9",
+			Span: trace.Span{
+				TraceID:  "7180c278b62e8f6a216a2aea45d08fc9",
 				ParentID: pointer.String("6b221d5bc9e6496c"),
 				ID:       "5b4185666d50f68b",
 				Name:     pointer.String("get"),
@@ -1413,7 +1412,7 @@ func TestZipkinTraceConversion(t *testing.T) {
 func TestParseJaegerFromRequest(t *testing.T) {
 	Convey("SignalFx / Zipkin v2 spans get converted to jaeger batches", t, func() {
 		// the following test data comes from the github.com/signalfx/golib/trace/translator tests
-		var sourceSpans = []*trace.Span{
+		sourceSpans := []*trace.Span{
 			{
 				TraceID:  "a2969a8955571a3f",
 				ParentID: pointer.String("000000000068c4e3"),
@@ -1640,12 +1639,12 @@ func TestParseJaegerFromRequest(t *testing.T) {
 			},
 		}
 
-		var wantPostRequest = []*jaegerpb.Span{
+		wantPostRequest := []*jaegerpb.Span{
 			{
 				SpanID:        jaegerpb.SpanID(0x147d98),
 				TraceID:       jaegerpb.TraceID{Low: 11715721395283892799},
 				OperationName: "get",
-				StartTime:     time.Date(2017, 01, 26, 21, 46, 31, 639875000, time.UTC),
+				StartTime:     time.Date(2017, 0o1, 26, 21, 46, 31, 639875000, time.UTC),
 				Duration:      time.Duration(22938000),
 				Flags:         0,
 				Process:       wantFirstProcess,
@@ -1696,7 +1695,7 @@ func TestParseJaegerFromRequest(t *testing.T) {
 				},
 				Logs: []jaegerpb.Log{
 					{
-						Timestamp: time.Date(2017, 01, 26, 21, 46, 31, 639875000, time.UTC),
+						Timestamp: time.Date(2017, 0o1, 26, 21, 46, 31, 639875000, time.UTC),
 						Fields: []jaegerpb.KeyValue{
 							{
 								Key:   "key1",
@@ -1711,7 +1710,7 @@ func TestParseJaegerFromRequest(t *testing.T) {
 						},
 					},
 					{
-						Timestamp: time.Date(2017, 01, 26, 21, 46, 31, 639875000, time.UTC),
+						Timestamp: time.Date(2017, 0o1, 26, 21, 46, 31, 639875000, time.UTC),
 						Fields: []jaegerpb.KeyValue{
 							{
 								Key:   "annotation",
@@ -1727,7 +1726,7 @@ func TestParseJaegerFromRequest(t *testing.T) {
 				TraceID:       jaegerpb.TraceID{Low: 12868642899890739775, High: 1},
 				SpanID:        jaegerpb.SpanID(0x21d092272e),
 				OperationName: "post",
-				StartTime:     time.Date(2017, 01, 26, 21, 46, 31, 639875000, time.UTC),
+				StartTime:     time.Date(2017, 0o1, 26, 21, 46, 31, 639875000, time.UTC),
 				Duration:      time.Microsecond * 22938,
 				Process:       wantFirstProcess,
 				References: []jaegerpb.SpanRef{{
@@ -1753,11 +1752,12 @@ func TestParseJaegerFromRequest(t *testing.T) {
 					},
 				},
 				Logs: []jaegerpb.Log{},
-			}, {
+			},
+			{
 				TraceID:       jaegerpb.TraceID{Low: 14021564404497586751},
 				SpanID:        jaegerpb.SpanID(213952636718),
 				OperationName: "post",
-				StartTime:     time.Date(2017, 01, 26, 21, 46, 31, 639875000, time.UTC),
+				StartTime:     time.Date(2017, 0o1, 26, 21, 46, 31, 639875000, time.UTC),
 				Duration:      time.Microsecond * 22938,
 				Process:       wantFirstProcess,
 				References: []jaegerpb.SpanRef{{
@@ -1773,12 +1773,12 @@ func TestParseJaegerFromRequest(t *testing.T) {
 					},
 				},
 				Logs: []jaegerpb.Log{},
-			}, {
-
+			},
+			{
 				TraceID:       jaegerpb.TraceID{Low: 15174485909104433727},
 				SpanID:        jaegerpb.SpanID(47532398882098234),
 				OperationName: "post",
-				StartTime:     time.Date(2017, 01, 26, 21, 46, 31, 639875000, time.UTC),
+				StartTime:     time.Date(2017, 0o1, 26, 21, 46, 31, 639875000, time.UTC),
 				Duration:      time.Microsecond * 22938,
 				Flags:         2,
 				Process:       wantFirstProcess,
@@ -1802,12 +1802,12 @@ func TestParseJaegerFromRequest(t *testing.T) {
 					},
 				},
 				Logs: []jaegerpb.Log{},
-			}, {
-
+			},
+			{
 				TraceID:       jaegerpb.TraceID{Low: 16327407413711280703},
 				SpanID:        jaegerpb.SpanID(52035998509468730),
 				OperationName: "post",
-				StartTime:     time.Date(2017, 01, 26, 21, 46, 31, 639875000, time.UTC),
+				StartTime:     time.Date(2017, 0o1, 26, 21, 46, 31, 639875000, time.UTC),
 				Duration:      time.Microsecond * 22938,
 				Flags:         2,
 				Process:       wantFirstProcess,
@@ -1841,7 +1841,7 @@ func TestParseJaegerFromRequest(t *testing.T) {
 				TraceID:       jaegerpb.TraceID{Low: 17480328918319176255},
 				SpanID:        jaegerpb.SpanID(58525199627357242),
 				OperationName: "post",
-				StartTime:     time.Date(2017, 01, 26, 21, 46, 31, 639875000, time.UTC),
+				StartTime:     time.Date(2017, 0o1, 26, 21, 46, 31, 639875000, time.UTC),
 				Duration:      time.Microsecond * 22938,
 				Flags:         2,
 				Process: &jaegerpb.Process{
@@ -1889,7 +1889,7 @@ func TestParseJaegerFromRequest(t *testing.T) {
 				TraceID:       jaegerpb.TraceID{Low: 18025686685695023674},
 				SpanID:        jaegerpb.SpanID(63028799254727738),
 				OperationName: "get",
-				StartTime:     time.Date(2017, 01, 26, 21, 46, 31, 639875000, time.UTC),
+				StartTime:     time.Date(2017, 0o1, 26, 21, 46, 31, 639875000, time.UTC),
 				Duration:      time.Microsecond * 22938,
 				Process: &jaegerpb.Process{
 					ServiceName: "api3",
@@ -1934,18 +1934,18 @@ func TestParseJaegerFromRequest(t *testing.T) {
 
 		got, err := ParseJaegerSpansFromRequest(req)
 		So(spanfilter.IsInvalid(err), ShouldBeTrue)
-		sm := err.(*spanfilter.Map)
+		sm := err.(*spanfilter.Map) //nolint:errorlint
 		So(sm.Invalid[spanfilter.InvalidTraceID], ShouldResemble, []string{"invalidTraceID:DFEC5BE6328C3A"})
 		So(sm.Invalid[spanfilter.InvalidSpanID], ShouldResemble, []string{"fa281a8955571a3a:" + spanfilter.InvalidSpanID})
 		So(got, ShouldNotBeNil)
 
-		//assert that the returned batches match the desired batches
+		// assert that the returned batches match the desired batches
 		require.Equal(t, len(wantPostRequest), len(got))
 		assertSpansAreEqual(t, wantPostRequest, got)
 	})
 
 	Convey("Bad SignalFx (Zipkin V2) trace with binary annotations returns an error", t, func() {
-		var sourceSpans = []*InputSpan{
+		sourceSpans := []*InputSpan{
 			{
 				Span: trace.Span{
 					TraceID:  "a2969a8955571a3f",
@@ -2083,7 +2083,7 @@ func TestParseJaegerFromRequest(t *testing.T) {
 		assert.NotNil(t, got)
 		assert.NotEmpty(t, got)
 
-		//assert that the returned batches match the desired batches
+		// assert that the returned batches match the desired batches
 		require.Equal(t, len(want), len(got))
 		assertSpansAreEqual(t, want, got)
 	})
@@ -2165,6 +2165,7 @@ func sortedSpan(s *jaegerpb.Span) *jaegerpb.Span {
 }
 
 func assertSpansAreEqual(t *testing.T, want, got []*jaegerpb.Span) {
+	t.Helper()
 	sortSpans(got)
 	sortSpans(want)
 	for i := 0; i < len(got); i++ {
@@ -2178,7 +2179,7 @@ func BenchmarkParseJaegerFromRequest(b *testing.B) {
 	var batches []*jaegerpb.Span
 
 	// test data taken from github.com/signalfx/golib/trace/translator tests
-	var sourceSpans = []*trace.Span{
+	sourceSpans := []*trace.Span{
 		{
 			TraceID:  "a2969a8955571a3f",
 			ParentID: pointer.String("000000000068c4e3"),
@@ -2358,7 +2359,7 @@ func BenchmarkParseJaegerFromRequest(b *testing.B) {
 }
 
 func Test(t *testing.T) {
-	var sourceSpans = []*InputSpan{
+	sourceSpans := []*InputSpan{
 		{
 			Span: trace.Span{
 				TraceID:  "a2969a8955571a3f",
@@ -2401,6 +2402,5 @@ func Test(t *testing.T) {
 		},
 	}
 	bb, _ := easyjson.Marshal((*signalfxformat.InputSpan)(sourceSpans[0]))
-	fmt.Println(string(bb))
-
+	require.NotNil(t, bb)
 }

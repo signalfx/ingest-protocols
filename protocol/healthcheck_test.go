@@ -42,9 +42,9 @@ func (c *listenerServer) Datapoints() []*datapoint.Datapoint {
 
 var _ Listener = &listenerServer{}
 
-func grabHealthCheck(t *testing.T, baseURI string, status int) {
+func grabHealthCheck(baseURI string, status int) {
 	client := http.Client{}
-	req, err := http.NewRequest("GET", baseURI+"/healthz", nil)
+	req, err := http.NewRequestWithContext(context.Background(), "GET", baseURI+"/healthz", nil)
 	So(err, ShouldBeNil)
 	resp, err := client.Do(req)
 	So(err, ShouldBeNil)
@@ -76,17 +76,15 @@ func TestHealthCheck(t *testing.T) {
 			log.IfErr(log.Discard, err)
 		}()
 		Convey("Should expose health check", func() {
-			grabHealthCheck(t, baseURI, http.StatusOK)
+			grabHealthCheck(baseURI, http.StatusOK)
 			dp := listenServer.HealthDatapoints()
 			So(len(dp), ShouldEqual, 1)
-			fmt.Println(dp)
 			So(dp[0].Value, ShouldEqual, 1)
 			Convey("and we close the health check", func() {
 				listenServer.CloseHealthCheck()
-				grabHealthCheck(t, baseURI, http.StatusNotFound)
+				grabHealthCheck(baseURI, http.StatusNotFound)
 				dp := listenServer.HealthDatapoints()
 				So(len(dp), ShouldEqual, 1)
-				fmt.Println(dp)
 				So(dp[0].Value, ShouldEqual, 2)
 			})
 		})

@@ -1,14 +1,12 @@
 package csv
 
 import (
+	"context"
+	"errors"
 	"io/ioutil"
+	"net/http"
 	"os"
 	"testing"
-
-	"errors"
-
-	"context"
-	"net/http"
 
 	"github.com/signalfx/golib/v3/datapoint"
 	"github.com/signalfx/golib/v3/datapoint/dptest"

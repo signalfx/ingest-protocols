@@ -12,8 +12,7 @@ import (
 	. "github.com/smartystreets/goconvey/convey"
 )
 
-type obfend struct {
-}
+type obfend struct{}
 
 func (e *obfend) AddSpans(ctx context.Context, spans []*trace.Span) error {
 	return nil

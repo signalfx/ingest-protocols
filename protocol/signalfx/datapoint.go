@@ -4,9 +4,10 @@ import (
 	"bufio"
 	"bytes"
 	"context"
-	"crypto/sha1"
+	"crypto/sha1" //#nosec G505 -- We don't use this in a security context
 	"encoding/base64"
 	"encoding/json"
+	stderrors "errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -46,7 +47,9 @@ type ProtobufDecoderV1 struct {
 }
 
 var errInvalidProtobuf = errors.New("invalid protocol buffer sent")
+
 var errProtobufTooLarge = errors.New("protobuf structure too large")
+
 var errInvalidProtobufVarint = errors.New("invalid protobuf varint")
 
 func (decoder *ProtobufDecoderV1) Read(ctx context.Context, req *http.Request) error {
@@ -54,11 +57,10 @@ func (decoder *ProtobufDecoderV1) Read(ctx context.Context, req *http.Request) e
 	bufferedBody := bufio.NewReaderSize(body, 32768)
 	for {
 		_, err := bufferedBody.Peek(1)
-		if err == io.EOF {
+		if stderrors.Is(err, io.EOF) {
 			return nil
 		}
 		buf, err := bufferedBody.Peek(4) // should be big enough for any varint
-
 		if err != nil {
 			decoder.Logger.Log(log.Err, err, "peek error")
 			return err
@@ -81,7 +83,7 @@ func (decoder *ProtobufDecoderV1) Read(ctx context.Context, req *http.Request) e
 		buf = make([]byte, num)
 		_, err = io.ReadFull(bufferedBody, buf)
 		if err != nil {
-			return fmt.Errorf("unable to fully read protobuf message: %s", err)
+			return fmt.Errorf("unable to fully read protobuf message: %w", err)
 		}
 		var msg sfxmodel.DataPoint
 		err = proto.Unmarshal(buf, &msg)
@@ -113,7 +115,7 @@ func (decoder *JSONDecoderV1) Read(ctx context.Context, req *http.Request) error
 	dec := json.NewDecoder(req.Body)
 	for {
 		var d JSONDatapointV1
-		if err := dec.Decode(&d); err == io.EOF {
+		if err := dec.Decode(&d); stderrors.Is(err, io.EOF) {
 			break
 		} else if err != nil {
 			return err
@@ -147,8 +149,8 @@ func (decoder *ProtobufDecoderV2) Read(ctx context.Context, req *http.Request) (
 		return err
 	}
 	dps := make([]*datapoint.Datapoint, 0, len(msg.GetDatapoints()))
-	for _, protoDb := range msg.GetDatapoints() {
-		if dp, err1 := NewProtobufDataPointWithType(protoDb, sfxmodel.MetricType_GAUGE); err1 == nil {
+	for _, protoDP := range msg.GetDatapoints() {
+		if dp, err1 := NewProtobufDataPointWithType(protoDP, sfxmodel.MetricType_GAUGE); err1 == nil {
 			dps = append(dps, dp)
 		}
 	}
@@ -203,7 +205,7 @@ func (decoder *JSONDecoderV2) Read(ctx context.Context, req *http.Request) error
 					atomic.AddInt64(&decoder.invalidValue, 1)
 					continue
 				}
-				dp := datapoint.New(jsonDatapoint.Metric, jsonDatapoint.Dimensions, v, fromMT(sfxmodel.MetricType(mt)), fromTs(jsonDatapoint.Timestamp))
+				dp := datapoint.New(jsonDatapoint.Metric, jsonDatapoint.Dimensions, v, fromMT(sfxmodel.MetricType(mt)), fromTS(jsonDatapoint.Timestamp))
 				dps = append(dps, dp)
 			}
 		}
@@ -215,7 +217,7 @@ func (decoder *JSONDecoderV2) Read(ctx context.Context, req *http.Request) error
 }
 
 func getTokenLogFormat(req *http.Request) (ret []interface{}) {
-	h := sha1.New()
+	h := sha1.New() //#nosec G401
 	head := req.Header.Get(sfxclient.TokenHeaderName)
 	if _, err := io.WriteString(h, head); err != nil || head == "" {
 		return ret

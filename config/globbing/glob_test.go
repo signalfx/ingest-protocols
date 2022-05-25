@@ -7,7 +7,7 @@ import (
 )
 
 func TestEscapeMetaCharacters(t *testing.T) {
-	var cases = []struct {
+	cases := []struct {
 		desc    string
 		pattern string
 		match   []string

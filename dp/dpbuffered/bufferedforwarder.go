@@ -1,13 +1,12 @@
 package dpbuffered
 
 import (
-	"sync"
-	"sync/atomic"
-
 	"context"
 	"fmt"
 	"net/http"
 	"runtime"
+	"sync"
+	"sync/atomic"
 
 	"github.com/signalfx/golib/v3/datapoint"
 	"github.com/signalfx/golib/v3/datapoint/dpsink"
@@ -103,9 +102,9 @@ func (forwarder *BufferedForwarder) DebugEndpoints() map[string]http.Handler {
 
 var _ dpsink.Sink = &BufferedForwarder{}
 
-type errDPBufferFull string
+type dpBufferFullError string
 
-func (e errDPBufferFull) Error() string {
+func (e dpBufferFullError) Error() string {
 	return "Forwarder " + string(e) + " unable to send more datapoints.  Buffer full"
 }
 
@@ -117,7 +116,7 @@ func (forwarder *BufferedForwarder) AddDatapoints(ctx context.Context, points []
 	atomic.AddInt64(&forwarder.stats.totalDatapointsBuffered, int64(len(points)))
 	if *forwarder.config.MaxTotalDatapoints <= atomic.LoadInt64(&forwarder.stats.totalDatapointsBuffered) {
 		atomic.AddInt64(&forwarder.stats.totalDatapointsBuffered, int64(-len(points)))
-		return errDPBufferFull(forwarder.identifier)
+		return dpBufferFullError(forwarder.identifier)
 	}
 	select {
 	case forwarder.dpChan <- points:
@@ -129,9 +128,9 @@ func (forwarder *BufferedForwarder) AddDatapoints(ctx context.Context, points []
 	}
 }
 
-type errEBufferFull string
+type eBufferFullError string
 
-func (e errEBufferFull) Error() string {
+func (e eBufferFullError) Error() string {
 	return "Forwarder " + string(e) + " unable to send more events.  Buffer full"
 }
 
@@ -143,7 +142,7 @@ func (forwarder *BufferedForwarder) AddEvents(ctx context.Context, events []*eve
 	atomic.AddInt64(&forwarder.stats.totalEventsBuffered, int64(len(events)))
 	if *forwarder.config.MaxTotalEvents <= atomic.LoadInt64(&forwarder.stats.totalEventsBuffered) {
 		atomic.AddInt64(&forwarder.stats.totalEventsBuffered, int64(-len(events)))
-		return errEBufferFull(forwarder.identifier)
+		return eBufferFullError(forwarder.identifier)
 	}
 	select {
 	case forwarder.eChan <- events:
@@ -155,9 +154,9 @@ func (forwarder *BufferedForwarder) AddEvents(ctx context.Context, events []*eve
 	}
 }
 
-type errTBufferFull string
+type tBufferFullError string
 
-func (e errTBufferFull) Error() string {
+func (e tBufferFullError) Error() string {
 	return "Forwarder " + string(e) + " unable to send more traces.  Buffer full"
 }
 
@@ -166,7 +165,7 @@ func (forwarder *BufferedForwarder) AddSpans(ctx context.Context, traces []*trac
 	atomic.AddInt64(&forwarder.stats.totalTracesBuffered, int64(len(traces)))
 	if *forwarder.config.MaxTotalSpans <= atomic.LoadInt64(&forwarder.stats.totalTracesBuffered) {
 		atomic.AddInt64(&forwarder.stats.totalTracesBuffered, int64(-len(traces)))
-		return errTBufferFull(forwarder.identifier)
+		return tBufferFullError(forwarder.identifier)
 	}
 	select {
 	case forwarder.tChan <- traces:

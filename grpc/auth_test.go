@@ -11,7 +11,7 @@ import (
 func TestGRPCAuth(t *testing.T) {
 	Convey("grpc auth", t, func() {
 		a := &SignalFxTokenAuth{
-			Token: "test",
+			Token:                    "test",
 			DisableTransportSecurity: false,
 		}
 

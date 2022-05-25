@@ -2,17 +2,16 @@ package carbon
 
 import (
 	"bufio"
+	"bytes"
+	"context"
+	stderrors "errors"
+	"fmt"
 	"io"
 	"net"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"time"
-
-	"sync"
-
-	"bytes"
-	"context"
-	"fmt"
 
 	"github.com/signalfx/golib/v3/datapoint"
 	"github.com/signalfx/golib/v3/datapoint/dpsink"
@@ -95,7 +94,7 @@ type carbonListenConn interface {
 	RemoteAddr() net.Addr
 }
 
-func (listener *Listener) handleUDPConnection(ctx context.Context, addr *net.UDPAddr, data []byte) error {
+func (listener *Listener) handleUDPConnection(ctx context.Context, addr *net.UDPAddr, data []byte) {
 	connLogger := log.NewContext(listener.logger).With(logkey.RemoteAddr, addr)
 	atomic.AddInt64(&listener.stats.totalConnections, 1)
 	atomic.AddInt64(&listener.stats.activeConnections, 1)
@@ -107,13 +106,12 @@ func (listener *Listener) handleUDPConnection(ctx context.Context, addr *net.UDP
 			if err == io.EOF {
 				atomic.AddInt64(&listener.stats.totalEOFCloses, 1)
 				if len(bytes) == 0 {
-					return nil
+					return
 				}
 			}
 			line := strings.TrimSpace(string(bytes))
 			if line != "" {
 				dp, err := NewCarbonDatapoint(line, listener.metricDeconstructor)
-
 				if err != nil {
 					atomic.AddInt64(&listener.stats.invalidDatapoints, 1)
 					connLogger.Log(logkey.CarbonLine, line, log.Err, err, "Received data on a carbon udp port, but it doesn't look like carbon data")
@@ -129,7 +127,6 @@ func (listener *Listener) handleUDPConnection(ctx context.Context, addr *net.UDP
 				atomic.AddInt64(&listener.stats.totalDatapoints, 1)
 			}
 		}
-
 	}
 }
 
@@ -145,7 +142,7 @@ func (listener *Listener) handleTCPConnection(ctx context.Context, conn carbonLi
 	for {
 		log.IfErr(connLogger, conn.SetDeadline(time.Now().Add(listener.connectionTimeout)))
 		bytes, err := reader.ReadBytes((byte)('\n'))
-		if err != nil && err != io.EOF {
+		if err != nil && !stderrors.Is(err, io.EOF) {
 			atomic.AddInt64(&listener.stats.idleTimeouts, 1)
 			connLogger.Log(log.Err, err, "Listening for carbon data returned an error (Note: We timeout idle connections)")
 			return err
@@ -167,7 +164,7 @@ func (listener *Listener) handleTCPConnection(ctx context.Context, conn carbonLi
 			atomic.AddInt64(&listener.stats.totalDatapoints, 1)
 		}
 
-		if err == io.EOF {
+		if stderrors.Is(err, io.EOF) {
 			atomic.AddInt64(&listener.stats.totalEOFCloses, 1)
 			return nil
 		}
@@ -182,7 +179,8 @@ func (listener *Listener) startListeningUDP() {
 		log.IfErr(listener.logger, listener.udpsocket.SetDeadline(time.Now().Add(listener.connectionTimeout)))
 		n, addr, err := listener.udpsocket.ReadFromUDP(buf)
 		if err != nil {
-			if netErr, ok := err.(net.Error); ok {
+			var netErr net.Error
+			if ok := stderrors.As(err, &netErr); ok {
 				if netErr.Timeout() {
 					atomic.AddInt64(&listener.stats.idleTimeouts, 1)
 					continue
@@ -193,7 +191,7 @@ func (listener *Listener) startListeningUDP() {
 		}
 		if n != 0 {
 			go func() {
-				log.IfErr(listener.logger, listener.handleUDPConnection(context.Background(), addr, buf[:n]))
+				listener.handleUDPConnection(context.Background(), addr, buf[:n])
 			}()
 		}
 	}
@@ -209,7 +207,8 @@ func (listener *Listener) startListeningTCP() {
 		}
 		conn, err := listener.psocket.Accept()
 		if err != nil {
-			if netErr, ok := err.(net.Error); ok {
+			var netErr net.Error
+			if ok := stderrors.As(err, &netErr); ok {
 				if netErr.Timeout() || netErr.Temporary() {
 					atomic.AddInt64(&listener.stats.retriedListenErrors, 1)
 					continue

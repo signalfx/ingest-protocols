@@ -2,11 +2,10 @@ package collectd
 
 import (
 	"encoding/json"
-	"testing"
-
 	"math"
 	"math/rand"
 	"strconv"
+	"testing"
 
 	"github.com/signalfx/gohelpers/workarounds"
 	"github.com/signalfx/golib/v3/datapoint"
@@ -255,7 +254,7 @@ func TestCollectdDimensonalizedPrecedence(t *testing.T) {
 }
 
 func TestCollectdParseNameForDimensions(t *testing.T) {
-	var tests = []struct {
+	tests := []struct {
 		val string
 		dim map[string]string
 	}{

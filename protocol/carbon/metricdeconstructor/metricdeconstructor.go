@@ -13,6 +13,7 @@ type MetricDeconstructor interface {
 }
 
 type loader func(string) (MetricDeconstructor, error)
+
 type loadJSON func(map[string]interface{}) (MetricDeconstructor, error)
 
 var knownLoaders = map[string]loader{

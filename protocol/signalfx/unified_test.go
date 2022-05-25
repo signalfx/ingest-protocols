@@ -3,7 +3,6 @@ package signalfx
 import (
 	"context"
 	"errors"
-	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -173,7 +172,7 @@ func TestFilter(t *testing.T) {
 		})
 
 		Convey("Invalid POST should return an error", func() {
-			req, err := http.NewRequest("POST", "", strings.NewReader(`_INVALID_JSON`))
+			req, err := http.NewRequestWithContext(context.Background(), "POST", "", strings.NewReader(`_INVALID_JSON`))
 			So(err, ShouldBeNil)
 			rw := httptest.NewRecorder()
 			i.ServeHTTP(rw, req)
@@ -181,14 +180,14 @@ func TestFilter(t *testing.T) {
 		})
 
 		Convey("POST should change dimensions", func() {
-			req, err := http.NewRequest("POST", "", strings.NewReader(`{"name":"jack"}`))
+			req, err := http.NewRequestWithContext(context.Background(), "POST", "", strings.NewReader(`{"name":"jack"}`))
 			So(err, ShouldBeNil)
 			rw := httptest.NewRecorder()
 			i.ServeHTTP(rw, req)
 			So(rw.Code, ShouldEqual, http.StatusOK)
 			So(i.GetDimensions(), ShouldResemble, map[string]string{"name": "jack"})
 			Convey("and GET should return them", func() {
-				req, err := http.NewRequest("GET", "", nil)
+				req, err := http.NewRequestWithContext(context.Background(), "GET", "", nil)
 				So(err, ShouldBeNil)
 				rw := httptest.NewRecorder()
 				i.ServeHTTP(rw, req)
@@ -197,7 +196,7 @@ func TestFilter(t *testing.T) {
 			})
 		})
 		Convey("PATCH should 404", func() {
-			req, err := http.NewRequest("PATCH", "", strings.NewReader(`{"name":"jack"}`))
+			req, err := http.NewRequestWithContext(context.Background(), "PATCH", "", strings.NewReader(`{"name":"jack"}`))
 			So(err, ShouldBeNil)
 			rw := httptest.NewRecorder()
 			i.ServeHTTP(rw, req)
@@ -288,17 +287,6 @@ func TestCounterSinkTrace(t *testing.T) {
 	assert.Equal(t, int64(0), atomic.LoadInt64(&dcount.CallsInFlight), "Call is finished")
 	assert.Equal(t, int64(0), atomic.LoadInt64(&dcount.TotalProcessErrors), "No errors so far (see above)")
 	assert.Equal(t, numTests, len(dcount.Datapoints()), "Just checking stats len()")
-
-	for _, v := range dcount.Datapoints() {
-		if v.Metric == "total_spans" {
-			fmt.Println(v)
-		}
-	}
-	for _, v := range dcount.Datapoints() {
-		if v.Metric == "total_spans" {
-			fmt.Println(v)
-		}
-	}
 
 	sink.RetError(errors.New("nope"))
 	if err := finalSink.AddSpans(ctx, es); err == nil {

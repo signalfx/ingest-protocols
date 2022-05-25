@@ -1,11 +1,9 @@
 package signalfx
 
 import (
-	"fmt"
-
-	"time"
-
 	"errors"
+	"fmt"
+	"time"
 
 	sfxmodel "github.com/signalfx/com_signalfx_metrics_protobuf/model"
 	"github.com/signalfx/golib/v3/datapoint"
@@ -80,7 +78,7 @@ func fromMT(mt sfxmodel.MetricType) datapoint.MetricType {
 	panic(fmt.Sprintf("Unknown metric type: %v\n", mt))
 }
 
-func fromTs(ts int64) time.Time {
+func fromTS(ts int64) time.Time {
 	if ts > 0 {
 		return time.Unix(0, ts*time.Millisecond.Nanoseconds())
 	}
@@ -113,7 +111,7 @@ func NewProtobufDataPointWithType(dp *sfxmodel.DataPoint, mType sfxmodel.MetricT
 		dims[dpdim.GetKey()] = dpdim.GetValue()
 	}
 
-	dpToRet := datapoint.New(dp.GetMetric(), dims, NewDatumValue(dp.GetValue()), fromMT(mt), fromTs(dp.GetTimestamp()))
+	dpToRet := datapoint.New(dp.GetMetric(), dims, NewDatumValue(dp.GetValue()), fromMT(mt), fromTS(dp.GetTimestamp()))
 	return dpToRet, nil
 }
 
@@ -167,5 +165,5 @@ func NewProtobufEvent(e *sfxmodel.Event) (*event.Event, error) {
 	}
 
 	cat := event.ToProtoEC(e.GetCategory())
-	return event.NewWithProperties(e.GetEventType(), cat, dims, props, fromTs(e.GetTimestamp())), nil
+	return event.NewWithProperties(e.GetEventType(), cat, dims, props, fromTS(e.GetTimestamp())), nil
 }

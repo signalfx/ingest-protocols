@@ -2,10 +2,9 @@ package metricdeconstructor
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
-
-	"errors"
 
 	"github.com/signalfx/golib/v3/datapoint"
 )
@@ -38,11 +37,11 @@ type typeRule struct {
 }
 
 var errTypeRuleNotDefined = errors.New("a TypeRule is defined without a type")
+
 var errTypeRuleIllDefined = errors.New("a TypeRule is defined with neither StartsWith or EndsWith")
 
 func (t *typeRule) verify() error {
-	err := t.verifyType()
-	if err != nil {
+	if err := t.verifyType(); err != nil {
 		return err
 	}
 	if t.MetricType == nil {
@@ -57,7 +56,6 @@ func (t *typeRule) verify() error {
 func (t *typeRule) extractType(line *string) *datapoint.MetricType {
 	if (t.StartsWith != "" && strings.HasPrefix(*line, t.StartsWith) || t.StartsWith == "") && (t.EndsWith != "" && strings.HasSuffix(*line, t.EndsWith) || t.EndsWith == "") {
 		return t.MetricType
-
 	}
 	return nil
 }
@@ -167,8 +165,7 @@ func (m *configurableDelimiterMetricRule) verify() error {
 	if !found && m.MetricName == "" {
 		return fmt.Errorf("the DimensionsMap does not have a metric specified; use %s to specify the metric name override MetricName", m.P.MetricIdentifier)
 	}
-	err := m.verifyType()
-	if err != nil {
+	if err := m.verifyType(); err != nil {
 		return err
 	}
 	return nil

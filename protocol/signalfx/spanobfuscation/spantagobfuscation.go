@@ -26,12 +26,12 @@ type SpanTagObfuscation struct {
 // OBFUSCATED is the value to use for obfuscated tags
 const OBFUSCATED = "<obfuscated>"
 
-//AddDatapoints is a passthrough
+// AddDatapoints is a passthrough
 func (o *SpanTagObfuscation) AddDatapoints(ctx context.Context, points []*datapoint.Datapoint) error {
 	return o.next.AddDatapoints(ctx, points)
 }
 
-//AddEvents is a passthrough
+// AddEvents is a passthrough
 func (o *SpanTagObfuscation) AddEvents(ctx context.Context, events []*event.Event) error {
 	return o.next.AddEvents(ctx, events)
 }

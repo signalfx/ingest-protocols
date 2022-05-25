@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
 	"net/http"
 	"strings"
@@ -246,7 +245,7 @@ const jaegerBatchJSON = `
 
 func TestJaegerThriftToSAPMDecoder(t *testing.T) {
 	// test data copied from https://github.com/jaegertracing/jaeger/blob/master/model/converter/thrift/jaeger/fixtures/thrift_batch_01.json
-	var jaegerThriftJSON = `
+	jaegerThriftJSON := `
 {
   "process": {
     "serviceName": "api",
@@ -345,7 +344,7 @@ func TestJaegerThriftToSAPMDecoder(t *testing.T) {
 }
 `
 	// modified from https://github.com/jaegertracing/jaeger/blob/master/model/converter/thrift/jaeger/fixtures/domain_01.json
-	var jagerProtoJSON = `
+	jagerProtoJSON := `
 {
   "process": {
 	"serviceName": "api",
@@ -470,7 +469,7 @@ func TestJaegerThriftToSAPMDecoder(t *testing.T) {
 }
 `
 	var batch jThrift.Batch
-	err := json.Unmarshal([]byte(jaegerThriftJSON), &batch)
+	_ = json.Unmarshal([]byte(jaegerThriftJSON), &batch)
 	batchBytes, err := thrift.NewTSerializer().Write(context.Background(), &batch)
 	if err != nil {
 		panic("couldn't serialize test batch to thrift")
@@ -478,7 +477,7 @@ func TestJaegerThriftToSAPMDecoder(t *testing.T) {
 
 	reqBody := ioutil.NopCloser(bytes.NewBuffer(batchBytes))
 
-	var desired = &splunksapm.PostSpansRequest{Batches: []*model.Batch{{}}}
+	desired := &splunksapm.PostSpansRequest{Batches: []*model.Batch{{}}}
 	err = jsonpb.Unmarshal(strings.NewReader(jagerProtoJSON), desired.Batches[0])
 	if err != nil {
 		panic("couldn't serialize protobuf acceptance criteria")
@@ -506,7 +505,7 @@ func TestJaegerThriftToSAPMDecoder(t *testing.T) {
 
 func TestJaegerTraceDecoder(t *testing.T) {
 	var batch jThrift.Batch
-	err := json.Unmarshal([]byte(jaegerBatchJSON), &batch)
+	_ = json.Unmarshal([]byte(jaegerBatchJSON), &batch)
 	batchBytes, err := thrift.NewTSerializer().Write(context.Background(), &batch)
 	if err != nil {
 		panic("couldn't serialize test batch to thrift")
@@ -799,7 +798,6 @@ func BenchmarkJaegerTraceDecoder(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		err := decoder.Read(context.Background(), &req)
 		if err != nil {
-			fmt.Println(i)
 			b.Fatal(err)
 		}
 		b.StopTimer()

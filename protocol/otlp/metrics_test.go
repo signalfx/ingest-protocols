@@ -30,7 +30,6 @@ import (
 const (
 	unixSecs  = int64(1574092046)
 	unixNSecs = int64(11 * time.Millisecond)
-	tsMSecs   = unixSecs*1e3 + unixNSecs/1e6
 )
 
 var ts = time.Unix(unixSecs, unixNSecs)
@@ -515,10 +514,10 @@ func Test_FromMetrics(t *testing.T) {
 				return []*metricsv1.ResourceMetrics{out}
 			},
 			wantSfxDataPoints: mergeDPs(
-				expectedFromHistogram("int_histo", labelMap, *intHistDP, false),
-				expectedFromHistogram("int_delta_histo", labelMap, *intHistDP, true),
-				expectedFromHistogram("double_histo", labelMap, *doubleHistDP, false),
-				expectedFromHistogram("double_delta_histo", labelMap, *doubleHistDP, true),
+				expectedFromHistogram("int_histo", labelMap, intHistDP, false),
+				expectedFromHistogram("int_delta_histo", labelMap, intHistDP, true),
+				expectedFromHistogram("double_histo", labelMap, doubleHistDP, false),
+				expectedFromHistogram("double_delta_histo", labelMap, doubleHistDP, true),
 				[]*datapoint.Datapoint{
 					int64SFxDataPoint("double_histo_bad_counts_count", datapoint.Counter, labelMap, int64(doubleHistDP.Count)),
 					doubleSFxDataPoint("double_histo_bad_counts", datapoint.Counter, labelMap, doubleHistDP.Sum),
@@ -550,7 +549,7 @@ func Test_FromMetrics(t *testing.T) {
 				}
 				return []*metricsv1.ResourceMetrics{out}
 			},
-			wantSfxDataPoints: expectedFromHistogram("no_bucket_histo", labelMap, *histDPNoBuckets, false),
+			wantSfxDataPoints: expectedFromHistogram("no_bucket_histo", labelMap, histDPNoBuckets, false),
 		},
 		{
 			name: "summaries",
@@ -604,7 +603,7 @@ func Test_FromMetrics(t *testing.T) {
 			rms := tt.metricsFn()
 			gotSfxDataPoints := FromOTLPMetricRequest(&metricsservicev1.ExportMetricsServiceRequest{ResourceMetrics: rms})
 			So(tt.wantSfxDataPoints, ShouldResemble, gotSfxDataPoints)
-			
+
 			dpsFromMetric := FromMetric(rms[0].GetInstrumentationLibraryMetrics()[0].Metrics[0])
 			So(dpsFromMetric, ShouldNotBeEmpty)
 		})
@@ -613,7 +612,7 @@ func Test_FromMetrics(t *testing.T) {
 
 func TestMetricTypeDerive(t *testing.T) {
 	Convey("deriveSignalFxMetricType panics if invalid metric", t, func() {
-		So(func() {deriveSignalFxMetricType(&metricsv1.Metric{})}, ShouldPanic)
+		So(func() { deriveSignalFxMetricType(&metricsv1.Metric{}) }, ShouldPanic)
 	})
 }
 
@@ -642,23 +641,33 @@ func TestAttributesToDimensions(t *testing.T) {
 			},
 			{
 				Key: "f",
-				Value: &commonv1.AnyValue{Value: &commonv1.AnyValue_ArrayValue{ArrayValue: &commonv1.ArrayValue{
-					Values: []*commonv1.AnyValue{
-						{Value: &commonv1.AnyValue_StringValue{StringValue: "n1"}},
-						{Value: &commonv1.AnyValue_StringValue{StringValue: "n2"}},
-					}}}},
+				Value: &commonv1.AnyValue{
+					Value: &commonv1.AnyValue_ArrayValue{
+						ArrayValue: &commonv1.ArrayValue{
+							Values: []*commonv1.AnyValue{
+								{Value: &commonv1.AnyValue_StringValue{StringValue: "n1"}},
+								{Value: &commonv1.AnyValue_StringValue{StringValue: "n2"}},
+							},
+						},
+					},
+				},
 			},
 			{
 				Key: "g",
-				Value: &commonv1.AnyValue{Value: &commonv1.AnyValue_KvlistValue{KvlistValue: &commonv1.KeyValueList{
-					Values: []*commonv1.KeyValue{
-						{Key: "k1", Value: &commonv1.AnyValue{Value: &commonv1.AnyValue_StringValue{StringValue: "n1"}}},
-						{Key: "k2", Value: &commonv1.AnyValue{Value: &commonv1.AnyValue_BoolValue{BoolValue: false}}},
-						{Key: "k3", Value: nil},
-						{Key: "k4", Value: &commonv1.AnyValue{Value: &commonv1.AnyValue_DoubleValue{DoubleValue: 40.3}}},
-						{Key: "k5", Value: &commonv1.AnyValue{Value: &commonv1.AnyValue_IntValue{IntValue: 41}}},
-						{Key: "k6", Value: &commonv1.AnyValue{Value: &commonv1.AnyValue_BytesValue{BytesValue: []byte("n2")}}},
-					}}}},
+				Value: &commonv1.AnyValue{
+					Value: &commonv1.AnyValue_KvlistValue{
+						KvlistValue: &commonv1.KeyValueList{
+							Values: []*commonv1.KeyValue{
+								{Key: "k1", Value: &commonv1.AnyValue{Value: &commonv1.AnyValue_StringValue{StringValue: "n1"}}},
+								{Key: "k2", Value: &commonv1.AnyValue{Value: &commonv1.AnyValue_BoolValue{BoolValue: false}}},
+								{Key: "k3", Value: nil},
+								{Key: "k4", Value: &commonv1.AnyValue{Value: &commonv1.AnyValue_DoubleValue{DoubleValue: 40.3}}},
+								{Key: "k5", Value: &commonv1.AnyValue{Value: &commonv1.AnyValue_IntValue{IntValue: 41}}},
+								{Key: "k6", Value: &commonv1.AnyValue{Value: &commonv1.AnyValue_BytesValue{BytesValue: []byte("n2")}}},
+							},
+						},
+					},
+				},
 			},
 			{
 				Key:   "h",
@@ -673,7 +682,7 @@ func TestAttributesToDimensions(t *testing.T) {
 				Value: &commonv1.AnyValue{Value: nil},
 			},
 			{
-				Key: "k",
+				Key:   "k",
 				Value: &commonv1.AnyValue{Value: &commonv1.AnyValue_BytesValue{BytesValue: []byte("to boldly go")}},
 			},
 		}
@@ -707,7 +716,7 @@ func TestAttributesToDimensions(t *testing.T) {
 		}
 		var m SignalFxMetric
 		m.DP.Attributes = attrs
-		So(func() {m.ToDatapoint()}, ShouldPanic)
+		So(func() { m.ToDatapoint() }, ShouldPanic)
 	})
 }
 
@@ -744,7 +753,7 @@ func int64SFxDataPoint(
 func expectedFromHistogram(
 	metricName string,
 	dims map[string]string,
-	histDP metricsv1.HistogramDataPoint,
+	histDP *metricsv1.HistogramDataPoint,
 	isDelta bool,
 ) []*datapoint.Datapoint {
 	buckets := histDP.GetBucketCounts()

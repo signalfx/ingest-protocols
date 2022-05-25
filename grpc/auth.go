@@ -10,7 +10,7 @@ import (
 // SignalFxTokenAuth is a credentials.PerRPCCredentials object that sets an auth token on each gRPC request
 // as expected by our ingest service.
 type SignalFxTokenAuth struct {
-	Token string
+	Token                    string
 	DisableTransportSecurity bool
 }
 

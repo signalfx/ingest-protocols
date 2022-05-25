@@ -2,13 +2,12 @@ package carbon
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"net"
 	"strconv"
 	"strings"
 	"time"
-
-	"context"
 
 	"github.com/signalfx/golib/v3/datapoint"
 	"github.com/signalfx/golib/v3/errors"
@@ -50,7 +49,6 @@ var defaultForwarderConfig = &ForwarderConfig{
 
 // NewForwarder creates a new unbuffered forwarder for sending points to carbon
 func NewForwarder(host string, passedConf *ForwarderConfig) (*Forwarder, error) {
-
 	conf := pointer.FillDefaultFrom(passedConf, defaultForwarderConfig).(*ForwarderConfig)
 
 	connectionAddress := net.JoinHostPort(host, strconv.FormatUint(uint64(*conf.Port), 10))

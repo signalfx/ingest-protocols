@@ -3,7 +3,7 @@ package zipper
 import (
 	"bytes"
 	"compress/gzip"
-	"fmt"
+	"context"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -13,18 +13,15 @@ import (
 	. "github.com/smartystreets/goconvey/convey"
 )
 
-type foo struct {
-}
+type foo struct{}
 
 func (f *foo) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	buf := new(bytes.Buffer)
-	_, err := buf.ReadFrom(req.Body)
-	if err == nil {
+	if _, err := buf.ReadFrom(req.Body); err == nil {
 		if buf.String() == "OK" {
 			rw.WriteHeader(http.StatusOK)
 		}
 	}
-	fmt.Println(err)
 	rw.WriteHeader(http.StatusBadRequest)
 }
 
@@ -55,7 +52,7 @@ func Test(t *testing.T) {
 		for _, test := range tests {
 			test := test
 			Convey(test.name, func() {
-				req, err := http.NewRequest("GET", "/health-check", bytes.NewBuffer(test.data))
+				req, err := http.NewRequestWithContext(context.Background(), "GET", "/health-check", bytes.NewBuffer(test.data))
 				for k, v := range test.headers {
 					req.Header.Set(k, v)
 				}
@@ -64,7 +61,6 @@ func Test(t *testing.T) {
 				g := test.zipper.GzipHandler(f)
 				g.ServeHTTP(rr, req)
 				So(rr.Code, ShouldEqual, test.status)
-
 			})
 		}
 		Convey("check datapoints", func() {

@@ -14,7 +14,7 @@ func TestGetRules(t *testing.T) {
 	serviceGlob, _ := glob.Compile(`\^\\some*service\$`)
 	opGlob, _ := glob.Compile(`operation\.*`)
 
-	var cases = []struct {
+	cases := []struct {
 		desc        string
 		config      []*TagMatchRuleConfig
 		outputRules []*rule

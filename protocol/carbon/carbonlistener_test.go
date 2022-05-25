@@ -110,7 +110,7 @@ func TestCarbonForwarderNormal(t *testing.T) {
 					time.Sleep(time.Millisecond)
 				}
 
-				tailErr := errors.Tail(err).(net.Error)
+				tailErr := errors.Tail(err).(net.Error) // nolint:errorlint
 				So(tailErr.Timeout(), ShouldBeTrue)
 			}
 			Convey("Should respect ctx cancel", func() {

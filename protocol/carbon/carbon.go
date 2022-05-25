@@ -1,6 +1,7 @@
 package carbon
 
 import (
+	stderrors "errors"
 	"strconv"
 	"strings"
 	"time"
@@ -38,7 +39,7 @@ func NewCarbonDatapoint(line string, metricDeconstructor metricdeconstructor.Met
 	originalMetricName := parts[0]
 	metricName, mtype, dimensions, err := metricDeconstructor.Parse(originalMetricName)
 
-	if err == metricdeconstructor.ErrSkipMetric {
+	if stderrors.Is(err, metricdeconstructor.ErrSkipMetric) {
 		return nil, nil
 	}
 	if err != nil {
