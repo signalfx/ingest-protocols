@@ -33,7 +33,7 @@ import (
 var (
 	// Some standard dimension keys.
 	// upper bound dimension key for histogram buckets.
-	upperBoundDimensionKey = "upper_bound"
+	upperBoundDimensionKey = "le"
 
 	// infinity bound dimension value is used on all histograms.
 	infinityBoundSFxDimValue = float64ToDimValue(math.Inf(1))
@@ -219,7 +219,7 @@ func convertHistogram(histDPs []*metricsv1.HistogramDataPoint, typ datapoint.Met
 		i++
 
 		sumPt := &out[i]
-		sumPt.Name = name
+		sumPt.Name = name + "_sum"
 		sumPt.Type = typ
 		sum := histDP.GetSum()
 		sumPt.DP.Attributes = stringAttrs
@@ -236,6 +236,7 @@ func convertHistogram(histDPs []*metricsv1.HistogramDataPoint, typ datapoint.Met
 			continue
 		}
 
+		var le int64
 		for j, c := range counts {
 			bound := infinityBoundSFxDimValue
 			if j < len(bounds) {
@@ -254,7 +255,8 @@ func convertHistogram(histDPs []*metricsv1.HistogramDataPoint, typ datapoint.Met
 				},
 			})
 			dp.DP.TimeUnixNano = histDP.GetTimeUnixNano()
-			dp.DP.Value = &metricsv1.NumberDataPoint_AsInt{AsInt: int64(c)}
+			le += int64(c)
+			dp.DP.Value = &metricsv1.NumberDataPoint_AsInt{AsInt: le}
 			i++
 		}
 	}
@@ -289,7 +291,7 @@ func convertSummaryDataPoints(
 		i++
 
 		sumPt := &out[i]
-		sumPt.Name = name
+		sumPt.Name = name + "_sum"
 		sumPt.Type = datapoint.Counter
 		sumPt.DP.Attributes = stringAttrs
 		sumPt.DP.TimeUnixNano = inDp.GetTimeUnixNano()
