@@ -528,11 +528,11 @@ func Test_FromMetrics(t *testing.T) {
 					expectedFromHistogram("double_delta_histo", labelMap, doubleHistDP, true),
 					[]*datapoint.Datapoint{
 						int64SFxDataPoint("double_histo_bad_counts_count", datapoint.Counter, labelMap, int64(doubleHistDP.Count)),
-						doubleSFxDataPoint("double_histo_bad_counts", datapoint.Counter, labelMap, *doubleHistDP.Sum),
+						doubleSFxDataPoint("double_histo_bad_counts_sum", datapoint.Counter, labelMap, *doubleHistDP.Sum),
 					},
 					[]*datapoint.Datapoint{
 						int64SFxDataPoint("int_histo_bad_counts_count", datapoint.Counter, labelMap, int64(intHistDP.Count)),
-						doubleSFxDataPoint("int_histo_bad_counts", datapoint.Counter, labelMap, *intHistDP.Sum),
+						doubleSFxDataPoint("int_histo_bad_counts_sum", datapoint.Counter, labelMap, *intHistDP.Sum),
 					},
 				),
 			},
@@ -776,27 +776,29 @@ func expectedFromHistogram(
 
 	dps = append(dps,
 		int64SFxDataPoint(metricName+"_count", typ, dims, int64(histDP.GetCount())),
-		doubleSFxDataPoint(metricName, typ, dims, histDP.GetSum()))
+		doubleSFxDataPoint(metricName+"_sum", typ, dims, histDP.GetSum()))
 
 	explicitBounds := histDP.GetExplicitBounds()
 	if explicitBounds == nil {
 		return dps
 	}
+	var le int64
 	for i := 0; i < len(explicitBounds); i++ {
 		dimsCopy := cloneStringMap(dims)
 		dimsCopy[upperBoundDimensionKey] = float64ToDimValue(explicitBounds[i])
-		dps = append(dps, int64SFxDataPoint(metricName+"_bucket", typ, dimsCopy, int64(buckets[i])))
+		le += int64(buckets[i])
+		dps = append(dps, int64SFxDataPoint(metricName+"_bucket", typ, dimsCopy, le))
 	}
 	dimsCopy := cloneStringMap(dims)
 	dimsCopy[upperBoundDimensionKey] = float64ToDimValue(math.Inf(1))
-	dps = append(dps, int64SFxDataPoint(metricName+"_bucket", typ, dimsCopy, int64(buckets[len(buckets)-1])))
+	le += int64(buckets[len(buckets)-1])
+	dps = append(dps, int64SFxDataPoint(metricName+"_bucket", typ, dimsCopy, le))
 	return dps
 }
 
 func expectedFromSummary(name string, labelMap map[string]string, count int64, sumVal float64) []*datapoint.Datapoint {
-	countName := name + "_count"
-	countPt := int64SFxDataPoint(countName, datapoint.Counter, labelMap, count)
-	sumPt := doubleSFxDataPoint(name, datapoint.Counter, labelMap, sumVal)
+	countPt := int64SFxDataPoint(name+"_count", datapoint.Counter, labelMap, count)
+	sumPt := doubleSFxDataPoint(name+"_sum", datapoint.Counter, labelMap, sumVal)
 	out := []*datapoint.Datapoint{countPt, sumPt}
 	quantileDimVals := []string{"0.25", "0.5", "0.75", "1"}
 	for i := 0; i < 4; i++ {
@@ -813,9 +815,8 @@ func expectedFromSummary(name string, labelMap map[string]string, count int64, s
 }
 
 func expectedFromEmptySummary(name string, labelMap map[string]string, count int64, sumVal float64) []*datapoint.Datapoint {
-	countName := name + "_count"
-	countPt := int64SFxDataPoint(countName, datapoint.Counter, labelMap, count)
-	sumPt := doubleSFxDataPoint(name, datapoint.Counter, labelMap, sumVal)
+	countPt := int64SFxDataPoint(name+"_count", datapoint.Counter, labelMap, count)
+	sumPt := doubleSFxDataPoint(name+"_sum", datapoint.Counter, labelMap, sumVal)
 	return []*datapoint.Datapoint{countPt, sumPt}
 }
 
