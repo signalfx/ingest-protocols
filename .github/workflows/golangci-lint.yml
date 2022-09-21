@@ -13,6 +13,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
+      - name: Setup Go
+        uses: actions/setup-go@v3
+        with:
+          go-version: 1.18
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v3
         with:
@@ -24,7 +28,7 @@ jobs:
           # only-new-issues: true
 
           # Optional: if set to true then the action will use pre-installed Go.
-          # skip-go-installation: true
+          skip-go-installation: true
 
           # Optional: if set to true then the action don't cache or restore ~/go/pkg.
           skip-pkg-cache: true
