@@ -7,6 +7,7 @@ import (
 )
 
 // JSONDatapointV1 is the JSON API format for /v1/datapoint
+//
 //easyjson:json
 type JSONDatapointV1 struct {
 	//easyjson:json
@@ -16,10 +17,12 @@ type JSONDatapointV1 struct {
 }
 
 // JSONDatapointV2 is the V2 json datapoint sending format
+//
 //easyjson:json
 type JSONDatapointV2 map[string][]*BodySendFormatV2
 
 // BodySendFormatV2 is the JSON format signalfx datapoints are expected to be in
+//
 //easyjson:json
 type BodySendFormatV2 struct {
 	Metric     string            `json:"metric"`
@@ -36,10 +39,12 @@ func (bodySendFormat *BodySendFormatV2) String() string {
 type ValueToSend interface{}
 
 // JSONEventV2 is the V2 json event sending format
+//
 //easyjson:json
 type JSONEventV2 []*EventSendFormatV2
 
 // EventSendFormatV2 is the JSON format signalfx datapoints are expected to be in
+//
 //easyjson:json
 type EventSendFormatV2 struct {
 	EventType  string                 `json:"eventType"`
@@ -51,6 +56,7 @@ type EventSendFormatV2 struct {
 
 // InputAnnotation associates an event that explains latency with a timestamp.
 // Unlike log statements, annotations are often codes. Ex. “ws” for WireSend
+//
 //easyjson:json
 type InputAnnotation struct {
 	Endpoint  *trace.Endpoint `json:"endpoint"`
@@ -78,6 +84,7 @@ func GetPointerToInt64(p *float64) *int64 {
 }
 
 // BinaryAnnotation associates an event that explains latency with a timestamp.
+//
 //easyjson:json
 type BinaryAnnotation struct {
 	Endpoint *trace.Endpoint `json:"endpoint"`
@@ -86,6 +93,7 @@ type BinaryAnnotation struct {
 }
 
 // InputSpan defines a span that is the union of v1 and v2 spans
+//
 //easyjson:json
 type InputSpan struct {
 	trace.Span
@@ -96,5 +104,6 @@ type InputSpan struct {
 }
 
 // InputSpanList is an array of InputSpan pointers
+//
 //easyjson:json
 type InputSpanList []*InputSpan

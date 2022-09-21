@@ -153,7 +153,7 @@ func getMetricPieces(line string) []string {
 }
 
 // https://docs.wavefront.com/wavefront_data_format.html
-//<metricName> <metricValue> [<timestamp>] source=<source> [pointTags]
+// <metricName> <metricValue> [<timestamp>] source=<source> [pointTags]
 func (listener *Listener) fromWavefrontDatapoint(line string) *datapoint.Datapoint {
 	pieces := getMetricPieces(line)
 	if len(pieces) < 3 {

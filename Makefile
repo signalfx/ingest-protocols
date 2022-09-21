@@ -4,7 +4,7 @@ BIN                   = $(GOPATH)/bin
 PKG                   = $(GOPATH)/pkg
 CP_RF                 = cp -rf
 RACE_PKG              = $(PKG)/darwin_amd64_race/github.com/signalfx
-GOLANGCI_LINT_VERSION = 1.20.0
+GOLANGCI_LINT_VERSION = 1.49.0
 GOCOV                 = $(BIN)/gocov
 .SHELLFLAGS           = -c # Run commands in a -c flag
 

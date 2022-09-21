@@ -1,10 +1,12 @@
 package collectdformat
 
 // JSONWriteBody is the full POST body of collectd's write_http format
+//
 //easyjson:json
 type JSONWriteBody []*JSONWriteFormat
 
 // JSONWriteFormat is the format for collectd json datapoints
+//
 //easyjson:json
 type JSONWriteFormat struct {
 	Dsnames        []*string  `json:"dsnames"`
