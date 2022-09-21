@@ -1,7 +1,7 @@
 SHELL                 = /bin/bash
 BASE                  = $(CURDIR)
 CP_RF                 = cp -rf
-GOLANGCI_LINT_VERSION = 1.20.0
+GOLANGCI_LINT_VERSION = 1.49.0
 
 # enable module support across all go commands.
 export GO111MODULE = on

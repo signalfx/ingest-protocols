@@ -159,7 +159,6 @@ linters:
     - asciicheck
     - bodyclose
     - cyclop
-    - deadcode
     - depguard
     - durationcheck
     - errorlint
@@ -192,7 +191,6 @@ linters:
     - predeclared
     - revive
     - staticcheck
-    - structcheck
     - stylecheck
     - testpackage
     - thelper
