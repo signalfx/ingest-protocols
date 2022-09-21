@@ -18,7 +18,7 @@ require (
 	github.com/signalfx/gohelpers v0.0.0-20151202220853-ac9f0e053f15
 	github.com/signalfx/golib/v3 v3.3.46
 	github.com/signalfx/sapm-proto v0.12.0
-	github.com/smartystreets/assertions v1.0.1
+	github.com/smartystreets/assertions v1.13.0
 	github.com/smartystreets/goconvey v1.6.4
 	github.com/stretchr/testify v1.8.0
 	go.opentelemetry.io/proto/otlp v0.19.0
