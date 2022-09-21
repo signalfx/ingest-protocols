@@ -15,7 +15,6 @@
 package otlp
 
 import (
-	"fmt"
 	"math"
 	"testing"
 	"time"
@@ -163,459 +162,446 @@ func Test_FromMetrics(t *testing.T) {
 		}
 	}
 
-	for _, useScopeMetrics := range []bool{false, true} {
-		createRMS := func() (*metricsv1.ResourceMetrics, *[]*metricsv1.Metric) {
-			out := &metricsv1.ResourceMetrics{}
-			var metrics *[]*metricsv1.Metric
-			if useScopeMetrics {
-				ilm := &metricsv1.ScopeMetrics{}
-				out.ScopeMetrics = append(out.ScopeMetrics, ilm)
-				metrics = &ilm.Metrics
-			} else {
-				ilm := &metricsv1.InstrumentationLibraryMetrics{}
-				out.InstrumentationLibraryMetrics = append(out.InstrumentationLibraryMetrics, ilm)
-				metrics = &ilm.Metrics
-			}
+	createRMS := func() (*metricsv1.ResourceMetrics, *[]*metricsv1.Metric) {
+		out := &metricsv1.ResourceMetrics{}
+		var metrics *[]*metricsv1.Metric
+		ilm := &metricsv1.ScopeMetrics{}
+		out.ScopeMetrics = append(out.ScopeMetrics, ilm)
+		metrics = &ilm.Metrics
 
-			return out, metrics
-		}
-		tests := []struct {
-			name              string
-			metricsFn         func() []*metricsv1.ResourceMetrics
-			wantSfxDataPoints []*datapoint.Datapoint
-		}{
-			{
-				name: "nil_node_nil_resources_no_dims",
-				metricsFn: func() []*metricsv1.ResourceMetrics {
-					out, metrics := createRMS()
+		return out, metrics
+	}
+	tests := []struct {
+		name              string
+		metricsFn         func() []*metricsv1.ResourceMetrics
+		wantSfxDataPoints []*datapoint.Datapoint
+	}{
+		{
+			name: "nil_node_nil_resources_no_dims",
+			metricsFn: func() []*metricsv1.ResourceMetrics {
+				out, metrics := createRMS()
 
-					*metrics = []*metricsv1.Metric{
-						{
-							Name: "gauge_double_with_no_dims",
-							Data: &metricsv1.Metric_Gauge{
-								Gauge: &metricsv1.Gauge{
-									DataPoints: []*metricsv1.NumberDataPoint{
-										makeDoublePt(),
-									},
-								},
-							},
-						},
-						{
-							Name: "gauge_int_with_no_dims",
-							Data: &metricsv1.Metric_Gauge{
-								Gauge: &metricsv1.Gauge{
-									DataPoints: []*metricsv1.NumberDataPoint{
-										makeInt64Pt(),
-									},
-								},
-							},
-						},
-						{
-							Name: "cumulative_double_with_no_dims",
-							Data: &metricsv1.Metric_Sum{
-								Sum: &metricsv1.Sum{
-									IsMonotonic:            true,
-									AggregationTemporality: metricsv1.AggregationTemporality_AGGREGATION_TEMPORALITY_CUMULATIVE,
-									DataPoints: []*metricsv1.NumberDataPoint{
-										makeDoublePt(),
-									},
-								},
-							},
-						},
-						{
-							Name: "cumulative_int_with_no_dims",
-							Data: &metricsv1.Metric_Sum{
-								Sum: &metricsv1.Sum{
-									IsMonotonic:            true,
-									AggregationTemporality: metricsv1.AggregationTemporality_AGGREGATION_TEMPORALITY_CUMULATIVE,
-									DataPoints: []*metricsv1.NumberDataPoint{
-										makeInt64Pt(),
-									},
-								},
-							},
-						},
-						{
-							Name: "delta_double_with_no_dims",
-							Data: &metricsv1.Metric_Sum{
-								Sum: &metricsv1.Sum{
-									IsMonotonic:            true,
-									AggregationTemporality: metricsv1.AggregationTemporality_AGGREGATION_TEMPORALITY_DELTA,
-									DataPoints: []*metricsv1.NumberDataPoint{
-										makeDoublePt(),
-									},
-								},
-							},
-						},
-						{
-							Name: "delta_int_with_no_dims",
-							Data: &metricsv1.Metric_Sum{
-								Sum: &metricsv1.Sum{
-									IsMonotonic:            true,
-									AggregationTemporality: metricsv1.AggregationTemporality_AGGREGATION_TEMPORALITY_DELTA,
-									DataPoints: []*metricsv1.NumberDataPoint{
-										makeInt64Pt(),
-									},
-								},
-							},
-						},
-						{
-							Name: "gauge_sum_double_with_no_dims",
-							Data: &metricsv1.Metric_Sum{
-								Sum: &metricsv1.Sum{
-									IsMonotonic: false,
-									DataPoints: []*metricsv1.NumberDataPoint{
-										makeDoublePt(),
-									},
-								},
-							},
-						},
-						{
-							Name: "gauge_sum_int_with_no_dims",
-							Data: &metricsv1.Metric_Sum{
-								Sum: &metricsv1.Sum{
-									IsMonotonic: false,
-									DataPoints: []*metricsv1.NumberDataPoint{
-										makeInt64Pt(),
-									},
-								},
-							},
-						},
-						{
-							Name: "gauge_sum_int_with_nil_value",
-							Data: &metricsv1.Metric_Sum{
-								Sum: &metricsv1.Sum{
-									IsMonotonic: false,
-									DataPoints: []*metricsv1.NumberDataPoint{
-										makeNilValuePt(),
-									},
-								},
-							},
-						},
-						{
-							Name: "nil_data",
-							Data: nil,
-						},
-					}
-
-					return []*metricsv1.ResourceMetrics{out}
-				},
-				wantSfxDataPoints: []*datapoint.Datapoint{
-					doubleSFxDataPoint("gauge_double_with_no_dims", datapoint.Gauge, nil, doubleVal),
-					int64SFxDataPoint("gauge_int_with_no_dims", datapoint.Gauge, nil, int64Val),
-					doubleSFxDataPoint("cumulative_double_with_no_dims", datapoint.Counter, nil, doubleVal),
-					int64SFxDataPoint("cumulative_int_with_no_dims", datapoint.Counter, nil, int64Val),
-					doubleSFxDataPoint("delta_double_with_no_dims", datapoint.Count, nil, doubleVal),
-					int64SFxDataPoint("delta_int_with_no_dims", datapoint.Count, nil, int64Val),
-					doubleSFxDataPoint("gauge_sum_double_with_no_dims", datapoint.Gauge, nil, doubleVal),
-					int64SFxDataPoint("gauge_sum_int_with_no_dims", datapoint.Gauge, nil, int64Val),
+				*metrics = []*metricsv1.Metric{
 					{
-						Metric:     "gauge_sum_int_with_nil_value",
-						Timestamp:  ts,
-						Value:      nil,
-						MetricType: datapoint.Gauge,
-						Dimensions: map[string]string{},
+						Name: "gauge_double_with_no_dims",
+						Data: &metricsv1.Metric_Gauge{
+							Gauge: &metricsv1.Gauge{
+								DataPoints: []*metricsv1.NumberDataPoint{
+									makeDoublePt(),
+								},
+							},
+						},
 					},
-				},
-			},
-			{
-				name: "nil_node_and_resources_with_dims",
-				metricsFn: func() []*metricsv1.ResourceMetrics {
-					out, metrics := createRMS()
-
-					*metrics = []*metricsv1.Metric{
-						{
-							Name: "gauge_double_with_dims",
-							Data: &metricsv1.Metric_Gauge{
-								Gauge: &metricsv1.Gauge{
-									DataPoints: []*metricsv1.NumberDataPoint{
-										makeDoublePtWithLabels(),
-									},
+					{
+						Name: "gauge_int_with_no_dims",
+						Data: &metricsv1.Metric_Gauge{
+							Gauge: &metricsv1.Gauge{
+								DataPoints: []*metricsv1.NumberDataPoint{
+									makeInt64Pt(),
 								},
 							},
 						},
-						{
-							Name: "gauge_int_with_dims",
-							Data: &metricsv1.Metric_Gauge{
-								Gauge: &metricsv1.Gauge{
-									DataPoints: []*metricsv1.NumberDataPoint{
-										makeInt64PtWithLabels(),
-									},
-								},
-							},
-						},
-						{
-							Name: "cumulative_double_with_dims",
-							Data: &metricsv1.Metric_Sum{
-								Sum: &metricsv1.Sum{
-									IsMonotonic:            true,
-									AggregationTemporality: metricsv1.AggregationTemporality_AGGREGATION_TEMPORALITY_CUMULATIVE,
-									DataPoints: []*metricsv1.NumberDataPoint{
-										makeDoublePtWithLabels(),
-									},
-								},
-							},
-						},
-						{
-							Name: "cumulative_int_with_dims",
-							Data: &metricsv1.Metric_Sum{
-								Sum: &metricsv1.Sum{
-									IsMonotonic:            true,
-									AggregationTemporality: metricsv1.AggregationTemporality_AGGREGATION_TEMPORALITY_CUMULATIVE,
-									DataPoints: []*metricsv1.NumberDataPoint{
-										makeInt64PtWithLabels(),
-									},
-								},
-							},
-						},
-					}
-
-					return []*metricsv1.ResourceMetrics{out}
-				},
-				wantSfxDataPoints: []*datapoint.Datapoint{
-					doubleSFxDataPoint("gauge_double_with_dims", datapoint.Gauge, labelMap, doubleVal),
-					int64SFxDataPoint("gauge_int_with_dims", datapoint.Gauge, labelMap, int64Val),
-					doubleSFxDataPoint("cumulative_double_with_dims", datapoint.Counter, labelMap, doubleVal),
-					int64SFxDataPoint("cumulative_int_with_dims", datapoint.Counter, labelMap, int64Val),
-				},
-			},
-			{
-				name: "with_node_resources_dims",
-				metricsFn: func() []*metricsv1.ResourceMetrics {
-					out, metrics := createRMS()
-					out.Resource = &resourcev1.Resource{
-						Attributes: []*commonv1.KeyValue{
-							{
-								Key:   "k_r0",
-								Value: &commonv1.AnyValue{Value: &commonv1.AnyValue_StringValue{StringValue: "v_r0"}},
-							},
-							{
-								Key:   "k_r1",
-								Value: &commonv1.AnyValue{Value: &commonv1.AnyValue_StringValue{StringValue: "v_r1"}},
-							},
-							{
-								Key:   "k_n0",
-								Value: &commonv1.AnyValue{Value: &commonv1.AnyValue_StringValue{StringValue: "v_n0"}},
-							},
-							{
-								Key:   "k_n1",
-								Value: &commonv1.AnyValue{Value: &commonv1.AnyValue_StringValue{StringValue: "v_n1"}},
-							},
-						},
-					}
-
-					*metrics = []*metricsv1.Metric{
-						{
-							Name: "gauge_double_with_dims",
-							Data: &metricsv1.Metric_Gauge{
-								Gauge: &metricsv1.Gauge{
-									DataPoints: []*metricsv1.NumberDataPoint{
-										makeDoublePtWithLabels(),
-									},
-								},
-							},
-						},
-						{
-							Name: "gauge_int_with_dims",
-							Data: &metricsv1.Metric_Gauge{
-								Gauge: &metricsv1.Gauge{
-									DataPoints: []*metricsv1.NumberDataPoint{
-										makeInt64PtWithLabels(),
-									},
-								},
-							},
-						},
-					}
-					return []*metricsv1.ResourceMetrics{out}
-				},
-				wantSfxDataPoints: []*datapoint.Datapoint{
-					doubleSFxDataPoint(
-						"gauge_double_with_dims",
-						datapoint.Gauge,
-						mergeStringMaps(map[string]string{
-							"k_n0": "v_n0",
-							"k_n1": "v_n1",
-							"k_r0": "v_r0",
-							"k_r1": "v_r1",
-						}, labelMap),
-						doubleVal),
-					int64SFxDataPoint(
-						"gauge_int_with_dims",
-						datapoint.Gauge,
-						mergeStringMaps(map[string]string{
-							"k_n0": "v_n0",
-							"k_n1": "v_n1",
-							"k_r0": "v_r0",
-							"k_r1": "v_r1",
-						}, labelMap),
-						int64Val),
-				},
-			},
-			{
-				name: "histograms",
-				metricsFn: func() []*metricsv1.ResourceMetrics {
-					out, metrics := createRMS()
-
-					*metrics = []*metricsv1.Metric{
-						{
-							Name: "int_histo",
-							Data: &metricsv1.Metric_Histogram{
-								Histogram: &metricsv1.Histogram{
-									DataPoints: []*metricsv1.HistogramDataPoint{
-										makeIntHistDP(),
-									},
-								},
-							},
-						},
-						{
-							Name: "int_delta_histo",
-							Data: &metricsv1.Metric_Histogram{
-								Histogram: &metricsv1.Histogram{
-									AggregationTemporality: metricsv1.AggregationTemporality_AGGREGATION_TEMPORALITY_DELTA,
-									DataPoints: []*metricsv1.HistogramDataPoint{
-										makeIntHistDP(),
-									},
-								},
-							},
-						},
-						{
-							Name: "double_histo",
-							Data: &metricsv1.Metric_Histogram{
-								Histogram: &metricsv1.Histogram{
-									DataPoints: []*metricsv1.HistogramDataPoint{
-										makeDoubleHistDP(),
-									},
-								},
-							},
-						},
-						{
-							Name: "double_delta_histo",
-							Data: &metricsv1.Metric_Histogram{
-								Histogram: &metricsv1.Histogram{
-									AggregationTemporality: metricsv1.AggregationTemporality_AGGREGATION_TEMPORALITY_DELTA,
-									DataPoints: []*metricsv1.HistogramDataPoint{
-										makeDoubleHistDP(),
-									},
-								},
-							},
-						},
-						{
-							Name: "double_histo_bad_counts",
-							Data: &metricsv1.Metric_Histogram{
-								Histogram: &metricsv1.Histogram{
-									DataPoints: []*metricsv1.HistogramDataPoint{
-										makeDoubleHistDPBadCounts(),
-									},
-								},
-							},
-						},
-						{
-							Name: "int_histo_bad_counts",
-							Data: &metricsv1.Metric_Histogram{
-								Histogram: &metricsv1.Histogram{
-									DataPoints: []*metricsv1.HistogramDataPoint{
-										makeIntHistDPBadCounts(),
-									},
-								},
-							},
-						},
-					}
-					return []*metricsv1.ResourceMetrics{out}
-				},
-				wantSfxDataPoints: mergeDPs(
-					expectedFromHistogram("int_histo", labelMap, intHistDP, false),
-					expectedFromHistogram("int_delta_histo", labelMap, intHistDP, true),
-					expectedFromHistogram("double_histo", labelMap, doubleHistDP, false),
-					expectedFromHistogram("double_delta_histo", labelMap, doubleHistDP, true),
-					[]*datapoint.Datapoint{
-						int64SFxDataPoint("double_histo_bad_counts_count", datapoint.Counter, labelMap, int64(doubleHistDP.Count)),
-						doubleSFxDataPoint("double_histo_bad_counts_sum", datapoint.Counter, labelMap, *doubleHistDP.Sum),
 					},
-					[]*datapoint.Datapoint{
-						int64SFxDataPoint("int_histo_bad_counts_count", datapoint.Counter, labelMap, int64(intHistDP.Count)),
-						doubleSFxDataPoint("int_histo_bad_counts_sum", datapoint.Counter, labelMap, *intHistDP.Sum),
+					{
+						Name: "cumulative_double_with_no_dims",
+						Data: &metricsv1.Metric_Sum{
+							Sum: &metricsv1.Sum{
+								IsMonotonic:            true,
+								AggregationTemporality: metricsv1.AggregationTemporality_AGGREGATION_TEMPORALITY_CUMULATIVE,
+								DataPoints: []*metricsv1.NumberDataPoint{
+									makeDoublePt(),
+								},
+							},
+						},
 					},
-				),
-			},
-			{
-				name: "distribution_no_buckets",
-				metricsFn: func() []*metricsv1.ResourceMetrics {
-					out, metrics := createRMS()
-
-					*metrics = []*metricsv1.Metric{
-						{
-							Name: "no_bucket_histo",
-							Data: &metricsv1.Metric_Histogram{
-								Histogram: &metricsv1.Histogram{
-									DataPoints: []*metricsv1.HistogramDataPoint{
-										makeHistDPNoBuckets(),
-									},
+					{
+						Name: "cumulative_int_with_no_dims",
+						Data: &metricsv1.Metric_Sum{
+							Sum: &metricsv1.Sum{
+								IsMonotonic:            true,
+								AggregationTemporality: metricsv1.AggregationTemporality_AGGREGATION_TEMPORALITY_CUMULATIVE,
+								DataPoints: []*metricsv1.NumberDataPoint{
+									makeInt64Pt(),
 								},
 							},
 						},
-					}
-					return []*metricsv1.ResourceMetrics{out}
-				},
-				wantSfxDataPoints: expectedFromHistogram("no_bucket_histo", labelMap, histDPNoBuckets, false),
-			},
-			{
-				name: "summaries",
-				metricsFn: func() []*metricsv1.ResourceMetrics {
-					out, metrics := createRMS()
-
-					*metrics = []*metricsv1.Metric{
-						{
-							Name: "summary",
-							Data: &metricsv1.Metric_Summary{
-								Summary: &metricsv1.Summary{
-									DataPoints: []*metricsv1.SummaryDataPoint{
-										makeSummaryDP(),
-									},
+					},
+					{
+						Name: "delta_double_with_no_dims",
+						Data: &metricsv1.Metric_Sum{
+							Sum: &metricsv1.Sum{
+								IsMonotonic:            true,
+								AggregationTemporality: metricsv1.AggregationTemporality_AGGREGATION_TEMPORALITY_DELTA,
+								DataPoints: []*metricsv1.NumberDataPoint{
+									makeDoublePt(),
 								},
 							},
 						},
-					}
-					return []*metricsv1.ResourceMetrics{out}
-				},
-				wantSfxDataPoints: expectedFromSummary("summary", labelMap, summaryCountVal, summarySumVal),
-			},
-			{
-				name: "empty_summary",
-				metricsFn: func() []*metricsv1.ResourceMetrics {
-					out, metrics := createRMS()
-
-					*metrics = []*metricsv1.Metric{
-						{
-							Name: "empty_summary",
-							Data: &metricsv1.Metric_Summary{
-								Summary: &metricsv1.Summary{
-									DataPoints: []*metricsv1.SummaryDataPoint{
-										makeEmptySummaryDP(),
-									},
+					},
+					{
+						Name: "delta_int_with_no_dims",
+						Data: &metricsv1.Metric_Sum{
+							Sum: &metricsv1.Sum{
+								IsMonotonic:            true,
+								AggregationTemporality: metricsv1.AggregationTemporality_AGGREGATION_TEMPORALITY_DELTA,
+								DataPoints: []*metricsv1.NumberDataPoint{
+									makeInt64Pt(),
 								},
 							},
 						},
-					}
-					return []*metricsv1.ResourceMetrics{out}
-				},
-				wantSfxDataPoints: expectedFromEmptySummary("empty_summary", labelMap, summaryCountVal, summarySumVal),
-			},
-		}
-		for _, tt := range tests {
-			Convey(fmt.Sprintf("%s - %v", tt.name, useScopeMetrics), t, func() {
-				rms := tt.metricsFn()
-				gotSfxDataPoints := FromOTLPMetricRequest(&metricsservicev1.ExportMetricsServiceRequest{ResourceMetrics: rms})
-				So(tt.wantSfxDataPoints, ShouldResemble, gotSfxDataPoints)
-
-				var firstMetric *metricsv1.Metric
-				if useScopeMetrics {
-					firstMetric = rms[0].GetScopeMetrics()[0].Metrics[0]
-				} else {
-					firstMetric = rms[0].GetInstrumentationLibraryMetrics()[0].Metrics[0]
+					},
+					{
+						Name: "gauge_sum_double_with_no_dims",
+						Data: &metricsv1.Metric_Sum{
+							Sum: &metricsv1.Sum{
+								IsMonotonic: false,
+								DataPoints: []*metricsv1.NumberDataPoint{
+									makeDoublePt(),
+								},
+							},
+						},
+					},
+					{
+						Name: "gauge_sum_int_with_no_dims",
+						Data: &metricsv1.Metric_Sum{
+							Sum: &metricsv1.Sum{
+								IsMonotonic: false,
+								DataPoints: []*metricsv1.NumberDataPoint{
+									makeInt64Pt(),
+								},
+							},
+						},
+					},
+					{
+						Name: "gauge_sum_int_with_nil_value",
+						Data: &metricsv1.Metric_Sum{
+							Sum: &metricsv1.Sum{
+								IsMonotonic: false,
+								DataPoints: []*metricsv1.NumberDataPoint{
+									makeNilValuePt(),
+								},
+							},
+						},
+					},
+					{
+						Name: "nil_data",
+						Data: nil,
+					},
 				}
-				dpsFromMetric := FromMetric(firstMetric)
-				So(dpsFromMetric, ShouldNotBeEmpty)
-			})
-		}
+
+				return []*metricsv1.ResourceMetrics{out}
+			},
+			wantSfxDataPoints: []*datapoint.Datapoint{
+				doubleSFxDataPoint("gauge_double_with_no_dims", datapoint.Gauge, nil, doubleVal),
+				int64SFxDataPoint("gauge_int_with_no_dims", datapoint.Gauge, nil, int64Val),
+				doubleSFxDataPoint("cumulative_double_with_no_dims", datapoint.Counter, nil, doubleVal),
+				int64SFxDataPoint("cumulative_int_with_no_dims", datapoint.Counter, nil, int64Val),
+				doubleSFxDataPoint("delta_double_with_no_dims", datapoint.Count, nil, doubleVal),
+				int64SFxDataPoint("delta_int_with_no_dims", datapoint.Count, nil, int64Val),
+				doubleSFxDataPoint("gauge_sum_double_with_no_dims", datapoint.Gauge, nil, doubleVal),
+				int64SFxDataPoint("gauge_sum_int_with_no_dims", datapoint.Gauge, nil, int64Val),
+				{
+					Metric:     "gauge_sum_int_with_nil_value",
+					Timestamp:  ts,
+					Value:      nil,
+					MetricType: datapoint.Gauge,
+					Dimensions: map[string]string{},
+				},
+			},
+		},
+		{
+			name: "nil_node_and_resources_with_dims",
+			metricsFn: func() []*metricsv1.ResourceMetrics {
+				out, metrics := createRMS()
+
+				*metrics = []*metricsv1.Metric{
+					{
+						Name: "gauge_double_with_dims",
+						Data: &metricsv1.Metric_Gauge{
+							Gauge: &metricsv1.Gauge{
+								DataPoints: []*metricsv1.NumberDataPoint{
+									makeDoublePtWithLabels(),
+								},
+							},
+						},
+					},
+					{
+						Name: "gauge_int_with_dims",
+						Data: &metricsv1.Metric_Gauge{
+							Gauge: &metricsv1.Gauge{
+								DataPoints: []*metricsv1.NumberDataPoint{
+									makeInt64PtWithLabels(),
+								},
+							},
+						},
+					},
+					{
+						Name: "cumulative_double_with_dims",
+						Data: &metricsv1.Metric_Sum{
+							Sum: &metricsv1.Sum{
+								IsMonotonic:            true,
+								AggregationTemporality: metricsv1.AggregationTemporality_AGGREGATION_TEMPORALITY_CUMULATIVE,
+								DataPoints: []*metricsv1.NumberDataPoint{
+									makeDoublePtWithLabels(),
+								},
+							},
+						},
+					},
+					{
+						Name: "cumulative_int_with_dims",
+						Data: &metricsv1.Metric_Sum{
+							Sum: &metricsv1.Sum{
+								IsMonotonic:            true,
+								AggregationTemporality: metricsv1.AggregationTemporality_AGGREGATION_TEMPORALITY_CUMULATIVE,
+								DataPoints: []*metricsv1.NumberDataPoint{
+									makeInt64PtWithLabels(),
+								},
+							},
+						},
+					},
+				}
+
+				return []*metricsv1.ResourceMetrics{out}
+			},
+			wantSfxDataPoints: []*datapoint.Datapoint{
+				doubleSFxDataPoint("gauge_double_with_dims", datapoint.Gauge, labelMap, doubleVal),
+				int64SFxDataPoint("gauge_int_with_dims", datapoint.Gauge, labelMap, int64Val),
+				doubleSFxDataPoint("cumulative_double_with_dims", datapoint.Counter, labelMap, doubleVal),
+				int64SFxDataPoint("cumulative_int_with_dims", datapoint.Counter, labelMap, int64Val),
+			},
+		},
+		{
+			name: "with_node_resources_dims",
+			metricsFn: func() []*metricsv1.ResourceMetrics {
+				out, metrics := createRMS()
+				out.Resource = &resourcev1.Resource{
+					Attributes: []*commonv1.KeyValue{
+						{
+							Key:   "k_r0",
+							Value: &commonv1.AnyValue{Value: &commonv1.AnyValue_StringValue{StringValue: "v_r0"}},
+						},
+						{
+							Key:   "k_r1",
+							Value: &commonv1.AnyValue{Value: &commonv1.AnyValue_StringValue{StringValue: "v_r1"}},
+						},
+						{
+							Key:   "k_n0",
+							Value: &commonv1.AnyValue{Value: &commonv1.AnyValue_StringValue{StringValue: "v_n0"}},
+						},
+						{
+							Key:   "k_n1",
+							Value: &commonv1.AnyValue{Value: &commonv1.AnyValue_StringValue{StringValue: "v_n1"}},
+						},
+					},
+				}
+
+				*metrics = []*metricsv1.Metric{
+					{
+						Name: "gauge_double_with_dims",
+						Data: &metricsv1.Metric_Gauge{
+							Gauge: &metricsv1.Gauge{
+								DataPoints: []*metricsv1.NumberDataPoint{
+									makeDoublePtWithLabels(),
+								},
+							},
+						},
+					},
+					{
+						Name: "gauge_int_with_dims",
+						Data: &metricsv1.Metric_Gauge{
+							Gauge: &metricsv1.Gauge{
+								DataPoints: []*metricsv1.NumberDataPoint{
+									makeInt64PtWithLabels(),
+								},
+							},
+						},
+					},
+				}
+				return []*metricsv1.ResourceMetrics{out}
+			},
+			wantSfxDataPoints: []*datapoint.Datapoint{
+				doubleSFxDataPoint(
+					"gauge_double_with_dims",
+					datapoint.Gauge,
+					mergeStringMaps(map[string]string{
+						"k_n0": "v_n0",
+						"k_n1": "v_n1",
+						"k_r0": "v_r0",
+						"k_r1": "v_r1",
+					}, labelMap),
+					doubleVal),
+				int64SFxDataPoint(
+					"gauge_int_with_dims",
+					datapoint.Gauge,
+					mergeStringMaps(map[string]string{
+						"k_n0": "v_n0",
+						"k_n1": "v_n1",
+						"k_r0": "v_r0",
+						"k_r1": "v_r1",
+					}, labelMap),
+					int64Val),
+			},
+		},
+		{
+			name: "histograms",
+			metricsFn: func() []*metricsv1.ResourceMetrics {
+				out, metrics := createRMS()
+
+				*metrics = []*metricsv1.Metric{
+					{
+						Name: "int_histo",
+						Data: &metricsv1.Metric_Histogram{
+							Histogram: &metricsv1.Histogram{
+								DataPoints: []*metricsv1.HistogramDataPoint{
+									makeIntHistDP(),
+								},
+							},
+						},
+					},
+					{
+						Name: "int_delta_histo",
+						Data: &metricsv1.Metric_Histogram{
+							Histogram: &metricsv1.Histogram{
+								AggregationTemporality: metricsv1.AggregationTemporality_AGGREGATION_TEMPORALITY_DELTA,
+								DataPoints: []*metricsv1.HistogramDataPoint{
+									makeIntHistDP(),
+								},
+							},
+						},
+					},
+					{
+						Name: "double_histo",
+						Data: &metricsv1.Metric_Histogram{
+							Histogram: &metricsv1.Histogram{
+								DataPoints: []*metricsv1.HistogramDataPoint{
+									makeDoubleHistDP(),
+								},
+							},
+						},
+					},
+					{
+						Name: "double_delta_histo",
+						Data: &metricsv1.Metric_Histogram{
+							Histogram: &metricsv1.Histogram{
+								AggregationTemporality: metricsv1.AggregationTemporality_AGGREGATION_TEMPORALITY_DELTA,
+								DataPoints: []*metricsv1.HistogramDataPoint{
+									makeDoubleHistDP(),
+								},
+							},
+						},
+					},
+					{
+						Name: "double_histo_bad_counts",
+						Data: &metricsv1.Metric_Histogram{
+							Histogram: &metricsv1.Histogram{
+								DataPoints: []*metricsv1.HistogramDataPoint{
+									makeDoubleHistDPBadCounts(),
+								},
+							},
+						},
+					},
+					{
+						Name: "int_histo_bad_counts",
+						Data: &metricsv1.Metric_Histogram{
+							Histogram: &metricsv1.Histogram{
+								DataPoints: []*metricsv1.HistogramDataPoint{
+									makeIntHistDPBadCounts(),
+								},
+							},
+						},
+					},
+				}
+				return []*metricsv1.ResourceMetrics{out}
+			},
+			wantSfxDataPoints: mergeDPs(
+				expectedFromHistogram("int_histo", labelMap, intHistDP, false),
+				expectedFromHistogram("int_delta_histo", labelMap, intHistDP, true),
+				expectedFromHistogram("double_histo", labelMap, doubleHistDP, false),
+				expectedFromHistogram("double_delta_histo", labelMap, doubleHistDP, true),
+				[]*datapoint.Datapoint{
+					int64SFxDataPoint("double_histo_bad_counts_count", datapoint.Counter, labelMap, int64(doubleHistDP.Count)),
+					doubleSFxDataPoint("double_histo_bad_counts_sum", datapoint.Counter, labelMap, *doubleHistDP.Sum),
+				},
+				[]*datapoint.Datapoint{
+					int64SFxDataPoint("int_histo_bad_counts_count", datapoint.Counter, labelMap, int64(intHistDP.Count)),
+					doubleSFxDataPoint("int_histo_bad_counts_sum", datapoint.Counter, labelMap, *intHistDP.Sum),
+				},
+			),
+		},
+		{
+			name: "distribution_no_buckets",
+			metricsFn: func() []*metricsv1.ResourceMetrics {
+				out, metrics := createRMS()
+
+				*metrics = []*metricsv1.Metric{
+					{
+						Name: "no_bucket_histo",
+						Data: &metricsv1.Metric_Histogram{
+							Histogram: &metricsv1.Histogram{
+								DataPoints: []*metricsv1.HistogramDataPoint{
+									makeHistDPNoBuckets(),
+								},
+							},
+						},
+					},
+				}
+				return []*metricsv1.ResourceMetrics{out}
+			},
+			wantSfxDataPoints: expectedFromHistogram("no_bucket_histo", labelMap, histDPNoBuckets, false),
+		},
+		{
+			name: "summaries",
+			metricsFn: func() []*metricsv1.ResourceMetrics {
+				out, metrics := createRMS()
+
+				*metrics = []*metricsv1.Metric{
+					{
+						Name: "summary",
+						Data: &metricsv1.Metric_Summary{
+							Summary: &metricsv1.Summary{
+								DataPoints: []*metricsv1.SummaryDataPoint{
+									makeSummaryDP(),
+								},
+							},
+						},
+					},
+				}
+				return []*metricsv1.ResourceMetrics{out}
+			},
+			wantSfxDataPoints: expectedFromSummary("summary", labelMap, summaryCountVal, summarySumVal),
+		},
+		{
+			name: "empty_summary",
+			metricsFn: func() []*metricsv1.ResourceMetrics {
+				out, metrics := createRMS()
+
+				*metrics = []*metricsv1.Metric{
+					{
+						Name: "empty_summary",
+						Data: &metricsv1.Metric_Summary{
+							Summary: &metricsv1.Summary{
+								DataPoints: []*metricsv1.SummaryDataPoint{
+									makeEmptySummaryDP(),
+								},
+							},
+						},
+					},
+				}
+				return []*metricsv1.ResourceMetrics{out}
+			},
+			wantSfxDataPoints: expectedFromEmptySummary("empty_summary", labelMap, summaryCountVal, summarySumVal),
+		},
+	}
+	for _, tt := range tests {
+		Convey(tt.name, t, func() {
+			rms := tt.metricsFn()
+			gotSfxDataPoints := FromOTLPMetricRequest(&metricsservicev1.ExportMetricsServiceRequest{ResourceMetrics: rms})
+			So(tt.wantSfxDataPoints, ShouldResemble, gotSfxDataPoints)
+
+			firstMetric := rms[0].GetScopeMetrics()[0].Metrics[0]
+			dpsFromMetric := FromMetric(firstMetric)
+			So(dpsFromMetric, ShouldNotBeEmpty)
+		})
 	}
 }
 
