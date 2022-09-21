@@ -3,7 +3,7 @@ module github.com/signalfx/ingest-protocols
 go 1.18
 
 require (
-	github.com/apache/thrift v0.16.0
+	github.com/apache/thrift v0.17.0
 	github.com/gobwas/glob v0.2.3
 	github.com/gogo/protobuf v1.3.2
 	github.com/golang/protobuf v1.5.2
