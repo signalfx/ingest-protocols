@@ -1,12 +1,7 @@
 SHELL                 = /bin/bash
 BASE                  = $(CURDIR)
-BIN                   = $(GOPATH)/bin
-PKG                   = $(GOPATH)/pkg
 CP_RF                 = cp -rf
-RACE_PKG              = $(PKG)/darwin_amd64_race/github.com/signalfx
 GOLANGCI_LINT_VERSION = 1.20.0
-GOCOV                 = $(BIN)/gocov
-.SHELLFLAGS           = -c # Run commands in a -c flag
 
 # enable module support across all go commands.
 export GO111MODULE = on
@@ -18,6 +13,10 @@ export GO111MODULE = on
 # default is verification of sfxinternalgo which includes all services
 .PHONY: verify
 verify: install-tools lint test
+
+.PHONY: echo
+echo:
+	echo $(GOCOV)
 
 # Tools that package is dependent on
 .PHONY: install-tools
@@ -33,7 +32,7 @@ fmt: ; $(info $(M) running fmt on $(CURDIR)/cmd)
 
 .PHONY: lint
 lint: ; $(info $(M) running linting on $(CURDIR))
-	$(BIN)/golangci-lint run -c $(CURDIR)/.golangci.yml -v
+	golangci-lint run -c $(CURDIR)/.golangci.yml -v
 
 ARGS                                        = -race -timeout=60s -failfast
 COVERAGE_MODE                               = atomic
@@ -49,9 +48,9 @@ ALL_PKGS := $(shell go list ./... | grep -v etcdIntf | grep -v format)
 test: ; $(info $(M) running test cases across all services in ingest-protocols)
 		mkdir -p $(COVERAGE_DIR)/coverage/
 		go test $(ARGS) -coverprofile=$(COVERAGE_FILE).all -covermode=$(COVERAGE_MODE) $(ALL_PKGS) || exit 2 ;\
-		total_coverage=`$(GOCOV) convert $(COVERAGE_FILE).all | $(GOCOV) report | grep -i "total coverage"` ;\
+		total_coverage=`gocov convert $(COVERAGE_FILE).all | gocov report | grep -i "total coverage"` ;\
 		if [[ "$$total_coverage" != *'$(FULL_COVERAGE)'* ]]; then \
-			$(GOCOV) convert $(COVERAGE_FILE).all | $(GOCOV) report ;\
+			gocov convert $(COVERAGE_FILE).all | gocov report ;\
 			exit 2 ;\
 		fi ;\
 
