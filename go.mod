@@ -13,7 +13,7 @@ require (
 	github.com/mailru/easyjson v0.7.7
 	github.com/opentracing/opentracing-go v1.2.0
 	github.com/prometheus/common v0.37.0
-	github.com/prometheus/prometheus v2.5.0+incompatible
+	github.com/prometheus/prometheus v0.38.0
 	github.com/signalfx/com_signalfx_metrics_protobuf v0.0.3
 	github.com/signalfx/gohelpers v0.0.0-20151202220853-ac9f0e053f15
 	github.com/signalfx/golib/v3 v3.3.46
@@ -32,7 +32,6 @@ require (
 	github.com/go-stack/stack v1.8.1 // indirect
 	github.com/gogo/googleapis v1.4.1 // indirect
 	github.com/gopherjs/gopherjs v0.0.0-20181017120253-0766667cb4d1 // indirect
-	github.com/grpc-ecosystem/grpc-gateway v1.16.0 // indirect
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.11.1 // indirect
 	github.com/josharian/intern v1.0.0 // indirect
 	github.com/jtolds/gls v4.20.0+incompatible // indirect

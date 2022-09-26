@@ -36,9 +36,9 @@ func getPayload(incoming *prompb.WriteRequest) []byte {
 
 func getWriteRequest() *prompb.WriteRequest {
 	return &prompb.WriteRequest{
-		Timeseries: []*prompb.TimeSeries{
+		Timeseries: []prompb.TimeSeries{
 			{
-				Labels: []*prompb.Label{
+				Labels: []prompb.Label{
 					{Name: "key", Value: "value"},
 					{Name: model.MetricNameLabel, Value: "process_cpu_seconds_total"}, // counter
 				},
@@ -79,11 +79,11 @@ func TestErrorCases(t *testing.T) {
 
 type errSink struct{}
 
-func (e *errSink) AddDatapoints(ctx context.Context, points []*datapoint.Datapoint) error {
+func (e *errSink) AddDatapoints(context.Context, []*datapoint.Datapoint) error {
 	return errors.New("nope")
 }
 
-func (e *errSink) AddEvents(ctx context.Context, points []*event.Event) error {
+func (e *errSink) AddEvents(context.Context, []*event.Event) error {
 	return errors.New("nope")
 }
 
@@ -200,7 +200,7 @@ func TestBad(t *testing.T) {
 		})
 		Convey("count bad datapoint", func() {
 			incoming := getWriteRequest()
-			incoming.Timeseries[0].Labels = []*prompb.Label{}
+			incoming.Timeseries[0].Labels = []prompb.Label{}
 			req, err := http.NewRequestWithContext(context.Background(), "POST", baseURL, bytes.NewReader(getPayload(incoming)))
 			So(err, ShouldBeNil)
 			req.Header.Set("Content-Type", "application/x-protobuf")

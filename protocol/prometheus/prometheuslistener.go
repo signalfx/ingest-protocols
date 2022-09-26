@@ -67,7 +67,7 @@ type decoder struct {
 	readAll            func(r io.Reader) ([]byte, error)
 }
 
-func getDimensions(labels []*prompb.Label) map[string]string {
+func getDimensions(labels []prompb.Label) map[string]string {
 	dims := make(map[string]string, len(labels))
 	for _, l := range labels {
 		dims[l.Name] = l.Value
@@ -108,7 +108,7 @@ func getMetricType(metric string) datapoint.MetricType {
 	return datapoint.Gauge
 }
 
-func (d *decoder) getDatapoints(ts *prompb.TimeSeries) []*datapoint.Datapoint {
+func (d *decoder) getDatapoints(ts prompb.TimeSeries) []*datapoint.Datapoint {
 	dimensions := getDimensions(ts.Labels)
 	metricName := getMetricName(dimensions)
 	if metricName == "" {
