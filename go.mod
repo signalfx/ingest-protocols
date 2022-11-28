@@ -22,7 +22,7 @@ require (
 	github.com/smartystreets/goconvey v1.7.2
 	github.com/stretchr/testify v1.8.0
 	go.opentelemetry.io/proto/otlp v0.19.0
-	google.golang.org/grpc v1.49.0
+	google.golang.org/grpc v1.51.0
 	google.golang.org/protobuf v1.28.1
 )
 
@@ -44,7 +44,7 @@ require (
 	go.uber.org/zap v1.23.0 // indirect
 	golang.org/x/net v0.0.0-20220809184613-07c6da5e1ced // indirect
 	golang.org/x/sys v0.0.0-20220808155132-1c4a2a72c664 // indirect
-	golang.org/x/text v0.3.7 // indirect
+	golang.org/x/text v0.4.0 // indirect
 	google.golang.org/genproto v0.0.0-20220808204814-fd01256a5276 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
