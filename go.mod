@@ -16,7 +16,7 @@ require (
 	github.com/prometheus/prometheus v0.38.0
 	github.com/signalfx/com_signalfx_metrics_protobuf v0.0.3
 	github.com/signalfx/gohelpers v0.0.0-20151202220853-ac9f0e053f15
-	github.com/signalfx/golib/v3 v3.3.46
+	github.com/signalfx/golib/v3 v3.3.48
 	github.com/signalfx/sapm-proto v0.12.0
 	github.com/smartystreets/assertions v1.13.0
 	github.com/smartystreets/goconvey v1.7.2
