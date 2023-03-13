@@ -63,7 +63,7 @@ func (s *SignalFxMetric) ToDatapoint() *datapoint.Datapoint {
 
 // StringAttributesToDimensions converts a list of string KVs into a map.
 func StringAttributesToDimensions(attributes []*commonv1.KeyValue) map[string]string {
-	dimensions := make(map[string]string, len(attributes))
+	dimensions := make(map[string]string)
 	if len(attributes) == 0 {
 		return dimensions
 	}
@@ -111,7 +111,7 @@ func datapointsFromMetrics(sfxMetrics []SignalFxMetric) []*datapoint.Datapoint {
 // SignalFxMetricsFromOTLPResourceMetrics creates the intermediate SignalFxMetric from OTLP metrics
 // instead of going all the way to datapoint.Datapoint.
 func SignalFxMetricsFromOTLPResourceMetrics(rms []*metricsv1.ResourceMetrics) []SignalFxMetric {
-	var sfxDps []SignalFxMetric
+	sfxDps := make([]SignalFxMetric, 0, len(rms))
 
 	for _, rm := range rms {
 		for _, ilm := range rm.GetScopeMetrics() {
