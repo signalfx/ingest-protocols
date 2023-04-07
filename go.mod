@@ -20,7 +20,7 @@ require (
 	github.com/signalfx/sapm-proto v0.12.0
 	github.com/smartystreets/assertions v1.13.0
 	github.com/smartystreets/goconvey v1.7.2
-	github.com/stretchr/testify v1.8.0
+	github.com/stretchr/testify v1.8.2
 	google.golang.org/grpc v1.49.0
 )
 
