@@ -114,15 +114,15 @@ func SignalFxMetricsFromOTLPResourceMetrics(rms []*metricsv1.ResourceMetrics) []
 	var sfxDps []SignalFxMetric
 
 	for _, rm := range rms {
+		resourceAttrs := stringifyAttributes(rm.GetResource().GetAttributes())
 		for _, ilm := range rm.GetScopeMetrics() {
 			for _, m := range ilm.GetMetrics() {
-				sfxDps = append(sfxDps, SignalFxMetricsFromOTLPMetric(m)...)
+				newDps := SignalFxMetricsFromOTLPMetric(m)
+				for i := range newDps {
+					newDps[i].DP.Attributes = append(newDps[i].DP.Attributes, resourceAttrs...)
+				}
+				sfxDps = append(sfxDps, newDps...)
 			}
-		}
-
-		resourceAttrs := stringifyAttributes(rm.GetResource().GetAttributes())
-		for i := range sfxDps {
-			sfxDps[i].DP.Attributes = append(sfxDps[i].DP.Attributes, resourceAttrs...)
 		}
 	}
 
