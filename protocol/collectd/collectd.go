@@ -6,6 +6,7 @@ import (
 
 	"github.com/signalfx/golib/v3/datapoint"
 	"github.com/signalfx/golib/v3/event"
+	"github.com/signalfx/ingest-protocols/logkey"
 	collectdformat "github.com/signalfx/ingest-protocols/protocol/collectd/format"
 )
 
@@ -54,6 +55,10 @@ func NewDatapoint(point *JSONWriteFormat, index uint, defaultDimensions map[stri
 	metricType := metricTypeFromDsType(dstype)
 	metricName, usedDsName := getReasonableMetricName(point, index, dimensions)
 
+	meta := map[interface{}]interface{}{
+		logkey.Protocol: logkey.Collectd,
+	}
+
 	addIfNotNullOrEmpty(dimensions, "plugin", true, point.Plugin)
 
 	parseDimensionsOut(dimensions, point.PluginInstance, point.Host)
@@ -67,7 +72,7 @@ func NewDatapoint(point *JSONWriteFormat, index uint, defaultDimensions map[stri
 	} else {
 		value = datapoint.NewFloatValue(*val)
 	}
-	return datapoint.New(metricName, dimensions, value, metricType, timestamp)
+	return datapoint.NewWithMeta(metricName, dimensions, meta, value, metricType, timestamp)
 }
 
 func addIfNotNullOrEmpty(dimensions map[string]string, key string, cond bool, val *string) {
