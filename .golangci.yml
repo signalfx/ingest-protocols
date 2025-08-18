@@ -37,14 +37,10 @@ issues:
 linters-settings:
   govet:
     check-shadowing: true
-  golint:
-    min-confidence: 0.3
   gocyclo:
     min-complexity: 10
   gocognit:
     min-complexity: 30
-  maligned:
-    suggest-new: true
   gofmt:
     # simplify code: gofmt with `-s` option, true by default
     simplify: true
@@ -95,12 +91,6 @@ linters-settings:
   funlen:
     lines: 500 # TODO: need to set this to 150 statements and work on it
     statements: 150
-  ifshort:
-    # Maximum length of variable declaration measured in number of lines, after which linter won't suggest using short syntax.
-    # Has higher priority than max-decl-chars.
-    max-decl-lines: 1
-    # Maximum length of variable declaration measured in number of characters, after which linter won't suggest using short syntax.
-    max-decl-chars: 30
   cyclop:
     # the maximal code complexity to report
     max-complexity: 15
@@ -143,7 +133,7 @@ linters-settings:
         truncate: "32"
   staticcheck:
     # Select the Go version to target. The default is '1.13'.
-    go: "1.17"
+    go: "1.20"
     # https://staticcheck.io/docs/options#checks
     checks:
       - "all"
@@ -179,10 +169,8 @@ linters:
     - gosec
     - gosimple
     - govet
-    - ifshort
     - ineffassign
     - makezero
-    - megacheck
     - misspell
     - nakedret
     - nilerr
