@@ -59,4 +59,6 @@ var (
 	ListenFrom = log.Key("listen_from")
 	// WavefrontLine is a direct line received from wavefront protocol
 	WavefrontLine = log.Key("wavefront_line")
+	// Collectd is a string indicating that incoming data is from collectd
+	Collectd = log.Key("collectd")
 )
