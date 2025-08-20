@@ -8,7 +8,7 @@ require (
 	github.com/gogo/protobuf v1.3.2
 	github.com/golang/protobuf v1.5.3
 	github.com/golang/snappy v0.0.4
-	github.com/gorilla/mux v1.8.0
+	github.com/gorilla/mux v1.8.1
 	github.com/jaegertracing/jaeger v1.38.0
 	github.com/mailru/easyjson v0.7.7
 	github.com/opentracing/opentracing-go v1.2.0
