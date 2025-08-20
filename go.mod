@@ -1,6 +1,6 @@
 module github.com/signalfx/ingest-protocols
 
-go 1.18
+go 1.23.0
 
 require (
 	github.com/apache/thrift v0.16.0
@@ -12,7 +12,7 @@ require (
 	github.com/jaegertracing/jaeger v1.38.0
 	github.com/mailru/easyjson v0.7.7
 	github.com/opentracing/opentracing-go v1.2.0
-	github.com/prometheus/common v0.37.0
+	github.com/prometheus/common v0.65.0
 	github.com/prometheus/prometheus v0.38.0
 	github.com/signalfx/com_signalfx_metrics_protobuf v0.0.3
 	github.com/signalfx/gohelpers v0.0.0-20151202220853-ac9f0e053f15
@@ -23,7 +23,7 @@ require (
 	github.com/stretchr/testify v1.10.0
 	go.opentelemetry.io/proto/otlp v0.19.0
 	google.golang.org/grpc v1.58.0
-	google.golang.org/protobuf v1.33.0
+	google.golang.org/protobuf v1.36.6
 )
 
 require (
@@ -36,6 +36,7 @@ require (
 	github.com/josharian/intern v1.0.0 // indirect
 	github.com/jtolds/gls v4.20.0+incompatible // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
+	github.com/prometheus/client_model v0.6.2 // indirect
 	github.com/signalfx/gohistogram v0.0.0-20160107210732-1ccfd2ff5083 // indirect
 	github.com/twmb/murmur3 v1.1.7 // indirect
 	github.com/uber/jaeger-client-go v2.30.0+incompatible // indirect
@@ -43,9 +44,9 @@ require (
 	go.uber.org/atomic v1.10.0 // indirect
 	go.uber.org/multierr v1.8.0 // indirect
 	go.uber.org/zap v1.23.0 // indirect
-	golang.org/x/net v0.17.0 // indirect
-	golang.org/x/sys v0.13.0 // indirect
-	golang.org/x/text v0.13.0 // indirect
+	golang.org/x/net v0.40.0 // indirect
+	golang.org/x/sys v0.33.0 // indirect
+	golang.org/x/text v0.25.0 // indirect
 	google.golang.org/genproto v0.0.0-20230711160842-782d3b101e98 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20230711160842-782d3b101e98 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20230711160842-782d3b101e98 // indirect
