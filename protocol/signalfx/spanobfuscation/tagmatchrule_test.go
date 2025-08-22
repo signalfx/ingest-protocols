@@ -6,7 +6,8 @@ import (
 	"github.com/gobwas/glob"
 	"github.com/gobwas/glob/match"
 	"github.com/signalfx/golib/v3/pointer"
-	. "github.com/smartystreets/goconvey/convey"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestGetRules(t *testing.T) {
@@ -60,21 +61,18 @@ func TestGetRules(t *testing.T) {
 			},
 		},
 	}
-	Convey("we should create a valid SpanTagRemoval with", t, func() {
-		for _, tc := range cases {
-			tc := tc
-			Convey(tc.desc, func() {
-				r, err := getRules(tc.config)
-				So(err, ShouldBeNil)
-				So(r, ShouldNotBeNil)
-				for i := 0; i < len(r); i++ {
-					So(r[i].service.(match.Matcher).String(), ShouldEqual, tc.outputRules[i].service.(match.Matcher).String())
-					So(r[i].operation.(match.Matcher).String(), ShouldEqual, tc.outputRules[i].operation.(match.Matcher).String())
-					for idx, tag := range r[i].tags {
-						So(tag, ShouldEqual, tc.outputRules[i].tags[idx])
-					}
+	for _, tc := range cases {
+		t.Run(tc.desc, func(t *testing.T) {
+			r, err := getRules(tc.config)
+			require.NoError(t, err)
+			require.NotNil(t, r)
+			for i := 0; i < len(r); i++ {
+				assert.Equal(t, tc.outputRules[i].service.(match.Matcher).String(), r[i].service.(match.Matcher).String())
+				assert.Equal(t, tc.outputRules[i].operation.(match.Matcher).String(), r[i].operation.(match.Matcher).String())
+				for idx, tag := range r[i].tags {
+					assert.Equal(t, tc.outputRules[i].tags[idx], tag)
 				}
-			})
-		}
-	})
+			}
+		})
+	}
 }

@@ -5,23 +5,22 @@ import (
 	"testing"
 
 	"github.com/signalfx/golib/v3/sfxclient"
-	. "github.com/smartystreets/goconvey/convey"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestGRPCAuth(t *testing.T) {
-	Convey("grpc auth", t, func() {
-		a := &SignalFxTokenAuth{
-			Token:                    "test",
-			DisableTransportSecurity: false,
-		}
+	a := &SignalFxTokenAuth{
+		Token:                    "test",
+		DisableTransportSecurity: false,
+	}
 
-		So(a.RequireTransportSecurity(), ShouldBeTrue)
+	assert.True(t, a.RequireTransportSecurity())
 
-		md, err := a.GetRequestMetadata(context.Background(), "")
-		So(err, ShouldBeNil)
-		So(md[sfxclient.TokenHeaderName], ShouldEqual, "test")
+	md, err := a.GetRequestMetadata(context.Background(), "")
+	require.NoError(t, err)
+	assert.Equal(t, "test", md[sfxclient.TokenHeaderName])
 
-		a.DisableTransportSecurity = true
-		So(a.RequireTransportSecurity(), ShouldBeFalse)
-	})
+	a.DisableTransportSecurity = true
+	assert.False(t, a.RequireTransportSecurity())
 }

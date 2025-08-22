@@ -19,7 +19,6 @@ import (
 	"github.com/signalfx/golib/v3/sfxclient/spanfilter"
 	"github.com/signalfx/golib/v3/trace"
 	signalfxformat "github.com/signalfx/ingest-protocols/protocol/signalfx/format"
-	. "github.com/smartystreets/goconvey/convey"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -198,72 +197,71 @@ func TestZipkinTraceDecoder(t *testing.T) {
 	}
 	err := decoder.Read(context.Background(), &req)
 
-	Convey("Valid spans should be sent even if some error", t, func() {
-		So(err, ShouldBeNil)
-		sm := spanfilter.GetSpanFilterMapFromContext(fs.ctx)
-		So(spanfilter.IsInvalid(sm), ShouldBeTrue)
-		smr := sm.(*spanfilter.Map) //nolint:errorlint
-		So(len(smr.Invalid[spanfilter.ZipkinV2BinaryAnnotations]), ShouldEqual, 1)
-		So(spans, ShouldResemble, []*trace.Span{
-			{
-				TraceID:  "0123456789abcdef",
-				ParentID: nil,
-				ID:       "abc1234567890def",
-				Name:     pointer.String("span1"),
-				Kind:     &ClientKind,
-				LocalEndpoint: &trace.Endpoint{
-					ServiceName: pointer.String("myclient"),
-					Ipv4:        pointer.String("127.0.0.1"),
-				},
-				RemoteEndpoint: &trace.Endpoint{
-					ServiceName: pointer.String("myserver"),
-					Ipv4:        pointer.String("127.0.1.1"),
-					Port:        pointer.Int32(443),
-				},
-				Timestamp: pointer.Int64(1000),
-				Duration:  pointer.Int64(100),
-				Debug:     &trueVar,
-				Shared:    &trueVar,
-				Annotations: []*trace.Annotation{
-					{Timestamp: pointer.Int64(1001), Value: pointer.String("something happened")},
-				},
-				Tags: map[string]string{
-					"additionalProp1": "string",
-					"additionalProp2": "string",
-					"additionalProp3": "string",
-				},
+	assert.NoError(t, err)
+	sm := spanfilter.GetSpanFilterMapFromContext(fs.ctx)
+	assert.True(t, spanfilter.IsInvalid(sm))
+	smr := sm.(*spanfilter.Map) //nolint:errorlint
+	assert.Equal(t, 1, len(smr.Invalid[spanfilter.ZipkinV2BinaryAnnotations]))
+	expectedSpans := []*trace.Span{
+		{
+			TraceID:  "0123456789abcdef",
+			ParentID: nil,
+			ID:       "abc1234567890def",
+			Name:     pointer.String("span1"),
+			Kind:     &ClientKind,
+			LocalEndpoint: &trace.Endpoint{
+				ServiceName: pointer.String("myclient"),
+				Ipv4:        pointer.String("127.0.0.1"),
 			},
-			{
-				TraceID:        "abcdef0123456789",
-				ParentID:       pointer.String("0123456789abcdef"),
-				ID:             "abcdef",
-				Name:           pointer.String("span2"),
-				Kind:           &ServerKind,
-				LocalEndpoint:  nil,
-				RemoteEndpoint: nil,
-				Timestamp:      pointer.Int64(2000),
-				Duration:       pointer.Int64(200),
-				Debug:          &falseVar,
-				Shared:         &falseVar,
-				Tags: map[string]string{
-					"additionalProp1": "string",
-					"additionalProp2": "string",
-					"additionalProp3": "string",
-				},
+			RemoteEndpoint: &trace.Endpoint{
+				ServiceName: pointer.String("myserver"),
+				Ipv4:        pointer.String("127.0.1.1"),
+				Port:        pointer.Int32(443),
 			},
-			{
-				TraceID:   "abcdef0123456789",
-				ParentID:  nil,
-				ID:        "oldspan",
-				Name:      pointer.String("span3"),
-				Timestamp: pointer.Int64(2000),
-				Duration:  pointer.Int64(200),
-				Tags: map[string]string{
-					"a": "v",
-				},
+			Timestamp: pointer.Int64(1000),
+			Duration:  pointer.Int64(100),
+			Debug:     &trueVar,
+			Shared:    &trueVar,
+			Annotations: []*trace.Annotation{
+				{Timestamp: pointer.Int64(1001), Value: pointer.String("something happened")},
 			},
-		})
-	})
+			Tags: map[string]string{
+				"additionalProp1": "string",
+				"additionalProp2": "string",
+				"additionalProp3": "string",
+			},
+		},
+		{
+			TraceID:        "abcdef0123456789",
+			ParentID:       pointer.String("0123456789abcdef"),
+			ID:             "abcdef",
+			Name:           pointer.String("span2"),
+			Kind:           &ServerKind,
+			LocalEndpoint:  nil,
+			RemoteEndpoint: nil,
+			Timestamp:      pointer.Int64(2000),
+			Duration:       pointer.Int64(200),
+			Debug:          &falseVar,
+			Shared:         &falseVar,
+			Tags: map[string]string{
+				"additionalProp1": "string",
+				"additionalProp2": "string",
+				"additionalProp3": "string",
+			},
+		},
+		{
+			TraceID:   "abcdef0123456789",
+			ParentID:  nil,
+			ID:        "oldspan",
+			Name:      pointer.String("span3"),
+			Timestamp: pointer.Int64(2000),
+			Duration:  pointer.Int64(200),
+			Tags: map[string]string{
+				"a": "v",
+			},
+		},
+	}
+	assert.Equal(t, expectedSpans, spans)
 }
 
 // Tests converted from
@@ -285,7 +283,7 @@ func TestZipkinTraceConversion(t *testing.T) {
 		ServiceName: pointer.String("kafka"),
 	}
 
-	Convey("Zipkin v2 spans gets passed through unaltered", t, func() {
+	t.Run("Zipkin v2 spans gets passed through unaltered", func(t *testing.T) {
 		span := InputSpan{
 			Timestamp: pointer.Float64(1472470996199000),
 			Duration:  pointer.Float64(207000),
@@ -312,10 +310,10 @@ func TestZipkinTraceConversion(t *testing.T) {
 		}
 
 		sp := span.fromZipkinV1()
-		So(sp, ShouldResemble, []*trace.Span{&span.Span})
+		assert.Equal(t, []*trace.Span{&span.Span}, sp)
 	})
 
-	Convey("client", t, func() {
+	t.Run("client", func(t *testing.T) {
 		simpleClient := trace.Span{
 			TraceID:        "7180c278b62e8f6a216a2aea45d08fc9",
 			ParentID:       pointer.String("6b221d5bc9e6496c"),
@@ -361,10 +359,10 @@ func TestZipkinTraceConversion(t *testing.T) {
 		}
 
 		sp := client.fromZipkinV1()
-		So(sp, ShouldResemble, []*trace.Span{&simpleClient})
+		assert.Equal(t, []*trace.Span{&simpleClient}, sp)
 	})
 
-	Convey("client_unfinished", t, func() {
+	t.Run("client_unfinished", func(t *testing.T) {
 		simpleClient := trace.Span{
 			TraceID:       "7180c278b62e8f6a216a2aea45d08fc9",
 			ParentID:      pointer.String("6b221d5bc9e6496c"),
@@ -394,10 +392,10 @@ func TestZipkinTraceConversion(t *testing.T) {
 		}
 
 		sp := client.fromZipkinV1()
-		So(sp, ShouldResemble, []*trace.Span{&simpleClient})
+		assert.Equal(t, []*trace.Span{&simpleClient}, sp)
 	})
 
-	Convey("client_unstarted", t, func() {
+	t.Run("client_unstarted", func(t *testing.T) {
 		simpleClient := trace.Span{
 			TraceID:       "7180c278b62e8f6a216a2aea45d08fc9",
 			ParentID:      pointer.String("6b221d5bc9e6496c"),
@@ -425,10 +423,10 @@ func TestZipkinTraceConversion(t *testing.T) {
 		}
 
 		sp := client.fromZipkinV1()
-		So(sp, ShouldResemble, []*trace.Span{&simpleClient})
+		assert.Equal(t, []*trace.Span{&simpleClient}, sp)
 	})
 
-	Convey("noAnnotationsExceptAddresses", t, func() {
+	t.Run("noAnnotationsExceptAddresses", func(t *testing.T) {
 		span2 := trace.Span{
 			TraceID:        "7180c278b62e8f6a216a2aea45d08fc9",
 			ParentID:       pointer.String("6b221d5bc9e6496c"),
@@ -456,10 +454,10 @@ func TestZipkinTraceConversion(t *testing.T) {
 			},
 		}
 		sp := span.fromZipkinV1()
-		So(sp, ShouldResemble, []*trace.Span{&span2})
+		assert.Equal(t, []*trace.Span{&span2}, sp)
 	})
 
-	Convey("fromSpan_redundantAddressAnnotations", t, func() {
+	t.Run("fromSpan_redundantAddressAnnotations", func(t *testing.T) {
 		span2 := trace.Span{
 			TraceID:       "7180c278b62e8f6a216a2aea45d08fc9",
 			ParentID:      pointer.String("6b221d5bc9e6496c"),
@@ -492,10 +490,10 @@ func TestZipkinTraceConversion(t *testing.T) {
 		}
 
 		sp := span.fromZipkinV1()
-		So(sp, ShouldResemble, []*trace.Span{&span2})
+		assert.Equal(t, []*trace.Span{&span2}, sp)
 	})
 
-	Convey("server", t, func() {
+	t.Run("server", func(t *testing.T) {
 		simpleServer := trace.Span{
 			TraceID:        "7180c278b62e8f6a216a2aea45d08fc9",
 			ID:             "216a2aea45d08fc9",
@@ -531,10 +529,10 @@ func TestZipkinTraceConversion(t *testing.T) {
 		}
 
 		sp := server.fromZipkinV1()
-		So(sp, ShouldResemble, []*trace.Span{&simpleServer})
+		assert.Equal(t, []*trace.Span{&simpleServer}, sp)
 	})
 
-	Convey("client_missingCs", t, func() {
+	t.Run("client_missingCs", func(t *testing.T) {
 		span2 := trace.Span{
 			TraceID:       "7180c278b62e8f6a216a2aea45d08fc9",
 			ID:            "216a2aea45d08fc9",
@@ -560,10 +558,10 @@ func TestZipkinTraceConversion(t *testing.T) {
 		}
 
 		sp := span.fromZipkinV1()
-		So(sp, ShouldResemble, []*trace.Span{&span2})
+		assert.Equal(t, []*trace.Span{&span2}, sp)
 	})
 
-	Convey("server_missingSr", t, func() {
+	t.Run("server_missingSr", func(t *testing.T) {
 		span2 := trace.Span{
 			TraceID:       "7180c278b62e8f6a216a2aea45d08fc9",
 			ID:            "216a2aea45d08fc9",
@@ -589,10 +587,10 @@ func TestZipkinTraceConversion(t *testing.T) {
 		}
 
 		sp := span.fromZipkinV1()
-		So(sp, ShouldResemble, []*trace.Span{&span2})
+		assert.Equal(t, []*trace.Span{&span2}, sp)
 	})
 
-	Convey("missingEndpoints", t, func() {
+	t.Run("missingEndpoints", func(t *testing.T) {
 		span2 := trace.Span{
 			TraceID:   "1",
 			ParentID:  pointer.String("1"),
@@ -615,10 +613,10 @@ func TestZipkinTraceConversion(t *testing.T) {
 		}
 
 		sp := span.fromZipkinV1()
-		So(sp, ShouldResemble, []*trace.Span{&span2})
+		assert.Equal(t, []*trace.Span{&span2}, sp)
 	})
 
-	Convey("missingEndpoints_coreAnnotation", t, func() {
+	t.Run("missingEndpoints_coreAnnotation", func(t *testing.T) {
 		span2 := trace.Span{
 			TraceID:   "1",
 			ParentID:  pointer.String("1"),
@@ -645,10 +643,10 @@ func TestZipkinTraceConversion(t *testing.T) {
 		}
 
 		sp := span.fromZipkinV1()
-		So(sp, ShouldResemble, []*trace.Span{&span2})
+		assert.Equal(t, []*trace.Span{&span2}, sp)
 	})
 
-	Convey("incomplete_only_sr", t, func() {
+	t.Run("incomplete_only_sr", func(t *testing.T) {
 		span2 := trace.Span{
 			TraceID:       "1",
 			ParentID:      pointer.String("1"),
@@ -674,10 +672,10 @@ func TestZipkinTraceConversion(t *testing.T) {
 		}
 
 		sp := span.fromZipkinV1()
-		So(sp, ShouldResemble, []*trace.Span{&span2})
+		assert.Equal(t, []*trace.Span{&span2}, sp)
 	})
 
-	Convey("lateRemoteEndpoint_ss", t, func() {
+	t.Run("lateRemoteEndpoint_ss", func(t *testing.T) {
 		span2 := trace.Span{
 			TraceID:        "1",
 			ParentID:       pointer.String("1"),
@@ -708,11 +706,11 @@ func TestZipkinTraceConversion(t *testing.T) {
 		}
 
 		sp := span.fromZipkinV1()
-		So(sp, ShouldResemble, []*trace.Span{&span2})
+		assert.Equal(t, []*trace.Span{&span2}, sp)
 	})
 
-	/** Late flushed data on a server span */
-	Convey("lateRemoteEndpoint_ca", t, func() {
+	// Late flushed data on a server span
+	t.Run("lateRemoteEndpoint_ca", func(t *testing.T) {
 		span2 := trace.Span{
 			TraceID:        "1",
 			ParentID:       pointer.String("1"),
@@ -736,10 +734,10 @@ func TestZipkinTraceConversion(t *testing.T) {
 		}
 
 		sp := span.fromZipkinV1()
-		So(sp, ShouldResemble, []*trace.Span{&span2})
+		assert.Equal(t, []*trace.Span{&span2}, sp)
 	})
 
-	Convey("lateRemoteEndpoint_cr", t, func() {
+	t.Run("lateRemoteEndpoint_cr", func(t *testing.T) {
 		span2 := trace.Span{
 			TraceID:        "1",
 			ParentID:       pointer.String("1"),
@@ -770,10 +768,10 @@ func TestZipkinTraceConversion(t *testing.T) {
 		}
 
 		sp := span.fromZipkinV1()
-		So(sp, ShouldResemble, []*trace.Span{&span2})
+		assert.Equal(t, []*trace.Span{&span2}, sp)
 	})
 
-	Convey("lateRemoteEndpoint_sa", t, func() {
+	t.Run("lateRemoteEndpoint_sa", func(t *testing.T) {
 		span2 := trace.Span{
 			TraceID:        "1",
 			ParentID:       pointer.String("1"),
@@ -797,10 +795,10 @@ func TestZipkinTraceConversion(t *testing.T) {
 		}
 
 		sp := span.fromZipkinV1()
-		So(sp, ShouldResemble, []*trace.Span{&span2})
+		assert.Equal(t, []*trace.Span{&span2}, sp)
 	})
 
-	Convey("localSpan_emptyComponent", t, func() {
+	t.Run("localSpan_emptyComponent", func(t *testing.T) {
 		simpleLocal := trace.Span{
 			TraceID:       "1",
 			ParentID:      pointer.String("1"),
@@ -828,10 +826,10 @@ func TestZipkinTraceConversion(t *testing.T) {
 		}
 
 		sp := local.fromZipkinV1()
-		So(sp, ShouldResemble, []*trace.Span{&simpleLocal})
+		assert.Equal(t, []*trace.Span{&simpleLocal}, sp)
 	})
 
-	Convey("clientAndServer", t, func() {
+	t.Run("clientAndServer", func(t *testing.T) {
 		noNameService := &trace.Endpoint{
 			ServiceName: nil,
 			Ipv4:        pointer.String("127.0.0.1"),
@@ -904,14 +902,14 @@ func TestZipkinTraceConversion(t *testing.T) {
 		}
 
 		sp := shared.fromZipkinV1()
-		So(sp, ShouldResemble, []*trace.Span{&client, &server})
+		assert.Equal(t, []*trace.Span{&client, &server}, sp)
 	})
 
 	/**
 	 * The old span format had no means of saying it is shared or not. This uses lack of timestamp as
 	 * a signal
 	 */
-	Convey("assumesServerWithoutTimestampIsShared", t, func() {
+	t.Run("assumesServerWithoutTimestampIsShared", func(t *testing.T) {
 		span := InputSpan{
 			Span: trace.Span{
 				TraceID:  "7180c278b62e8f6a216a2aea45d08fc9",
@@ -939,10 +937,10 @@ func TestZipkinTraceConversion(t *testing.T) {
 		}
 
 		sp := span.fromZipkinV1()
-		So(sp, ShouldResemble, []*trace.Span{&span2})
+		assert.Equal(t, []*trace.Span{&span2}, sp)
 	})
 
-	Convey("clientAndServer_loopback", t, func() {
+	t.Run("clientAndServer_loopback", func(t *testing.T) {
 		shared := InputSpan{
 			Timestamp: pointer.Float64(1472470996199000),
 			Duration:  pointer.Float64(207000),
@@ -987,10 +985,10 @@ func TestZipkinTraceConversion(t *testing.T) {
 		}
 
 		sp := shared.fromZipkinV1()
-		So(sp, ShouldResemble, []*trace.Span{&client, &server})
+		assert.Equal(t, []*trace.Span{&client, &server}, sp)
 	})
 
-	Convey("oneway_loopback", t, func() {
+	t.Run("oneway_loopback", func(t *testing.T) {
 		shared := InputSpan{
 			Span: trace.Span{
 				TraceID:  "7180c278b62e8f6a216a2aea45d08fc9",
@@ -1028,10 +1026,10 @@ func TestZipkinTraceConversion(t *testing.T) {
 		}
 
 		sp := shared.fromZipkinV1()
-		So(sp, ShouldResemble, []*trace.Span{&client, &server})
+		assert.Equal(t, []*trace.Span{&client, &server}, sp)
 	})
 
-	Convey("producer", t, func() {
+	t.Run("producer", func(t *testing.T) {
 		span := InputSpan{
 			Span: trace.Span{
 				TraceID:  "7180c278b62e8f6a216a2aea45d08fc9",
@@ -1056,10 +1054,10 @@ func TestZipkinTraceConversion(t *testing.T) {
 		}
 
 		sp := span.fromZipkinV1()
-		So(sp, ShouldResemble, []*trace.Span{&span2})
+		assert.Equal(t, []*trace.Span{&span2}, sp)
 	})
 
-	Convey("producer_remote", t, func() {
+	t.Run("producer_remote", func(t *testing.T) {
 		span := InputSpan{
 			Timestamp: pointer.Float64(1472470996199000),
 			Span: trace.Span{
@@ -1089,10 +1087,10 @@ func TestZipkinTraceConversion(t *testing.T) {
 		}
 
 		sp := span.fromZipkinV1()
-		So(sp, ShouldResemble, []*trace.Span{&span2})
+		assert.Equal(t, []*trace.Span{&span2}, sp)
 	})
 
-	Convey("producer_duration", t, func() {
+	t.Run("producer_duration", func(t *testing.T) {
 		span := InputSpan{
 			Timestamp: pointer.Float64(1472470996199000),
 			Duration:  pointer.Float64(51000),
@@ -1121,10 +1119,10 @@ func TestZipkinTraceConversion(t *testing.T) {
 		}
 
 		sp := span.fromZipkinV1()
-		So(sp, ShouldResemble, []*trace.Span{&span2})
+		assert.Equal(t, []*trace.Span{&span2}, sp)
 	})
 
-	Convey("consumer", t, func() {
+	t.Run("consumer", func(t *testing.T) {
 		span := InputSpan{
 			Timestamp: pointer.Float64(1472470996199000),
 			Span: trace.Span{
@@ -1150,10 +1148,10 @@ func TestZipkinTraceConversion(t *testing.T) {
 		}
 
 		sp := span.fromZipkinV1()
-		So(sp, ShouldResemble, []*trace.Span{&span2})
+		assert.Equal(t, []*trace.Span{&span2}, sp)
 	})
 
-	Convey("consumer_remote", t, func() {
+	t.Run("consumer_remote", func(t *testing.T) {
 		span := InputSpan{
 			Timestamp: pointer.Float64(1472470996199000),
 			Span: trace.Span{
@@ -1183,10 +1181,10 @@ func TestZipkinTraceConversion(t *testing.T) {
 		}
 
 		sp := span.fromZipkinV1()
-		So(sp, ShouldResemble, []*trace.Span{&span2})
+		assert.Equal(t, []*trace.Span{&span2}, sp)
 	})
 
-	Convey("consumer_duration", t, func() {
+	t.Run("consumer_duration", func(t *testing.T) {
 		span := InputSpan{
 			Timestamp: pointer.Float64(1472470996199000),
 			Duration:  pointer.Float64(51000),
@@ -1215,11 +1213,11 @@ func TestZipkinTraceConversion(t *testing.T) {
 		}
 
 		sp := span.fromZipkinV1()
-		So(sp, ShouldResemble, []*trace.Span{&span2})
+		assert.Equal(t, []*trace.Span{&span2}, sp)
 	})
 
 	/** shared span IDs for messaging spans isn't supported, but shouldn't break */
-	Convey("producerAndConsumer", t, func() {
+	t.Run("producerAndConsumer", func(t *testing.T) {
 		shared := InputSpan{
 			Span: trace.Span{
 				TraceID:  "7180c278b62e8f6a216a2aea45d08fc9",
@@ -1266,11 +1264,11 @@ func TestZipkinTraceConversion(t *testing.T) {
 		}
 
 		sp := shared.fromZipkinV1()
-		So(sp, ShouldResemble, []*trace.Span{&producer, &consumer})
+		assert.Equal(t, []*trace.Span{&producer, &consumer}, sp)
 	})
 
 	/** shared span IDs for messaging spans isn't supported, but shouldn't break */
-	Convey("producerAndConsumer_loopback_shared", t, func() {
+	t.Run("producerAndConsumer_loopback_shared", func(t *testing.T) {
 		shared := InputSpan{
 			Span: trace.Span{
 				TraceID:  "7180c278b62e8f6a216a2aea45d08fc9",
@@ -1312,10 +1310,10 @@ func TestZipkinTraceConversion(t *testing.T) {
 		}
 
 		sp := shared.fromZipkinV1()
-		So(sp, ShouldResemble, []*trace.Span{&producer, &consumer})
+		assert.Equal(t, []*trace.Span{&producer, &consumer}, sp)
 	})
 
-	Convey("dataMissingEndpointGoesOnFirstSpan", t, func() {
+	t.Run("dataMissingEndpointGoesOnFirstSpan", func(t *testing.T) {
 		shared := InputSpan{
 			Span: trace.Span{
 				TraceID: "7180c278b62e8f6a216a2aea45d08fc9",
@@ -1367,10 +1365,10 @@ func TestZipkinTraceConversion(t *testing.T) {
 		}
 
 		sp := shared.fromZipkinV1()
-		So(sp, ShouldResemble, []*trace.Span{&first, &second})
+		assert.Equal(t, []*trace.Span{&first, &second}, sp)
 	})
 
-	Convey("convertBinaryAnnotations", t, func() {
+	t.Run("convertBinaryAnnotations", func(t *testing.T) {
 		span := InputSpan{
 			Span: trace.Span{
 				TraceID: "1",
@@ -1404,13 +1402,13 @@ func TestZipkinTraceConversion(t *testing.T) {
 		}
 
 		sp := span.fromZipkinV1()
-		So(sp, ShouldResemble, []*trace.Span{&span2})
+		assert.Equal(t, []*trace.Span{&span2}, sp)
 	})
 }
 
 // nolint:funlen
 func TestParseJaegerFromRequest(t *testing.T) {
-	Convey("SignalFx / Zipkin v2 spans get converted to jaeger batches", t, func() {
+	t.Run("SignalFx / Zipkin v2 spans get converted to jaeger batches", func(t *testing.T) {
 		// the following test data comes from the github.com/signalfx/golib/trace/translator tests
 		sourceSpans := []*trace.Span{
 			{
@@ -1933,18 +1931,18 @@ func TestParseJaegerFromRequest(t *testing.T) {
 		req := httptest.NewRequest("POST", "/v1/trace", bytes.NewReader(payload))
 
 		got, err := ParseJaegerSpansFromRequest(req)
-		So(spanfilter.IsInvalid(err), ShouldBeTrue)
+		assert.True(t, spanfilter.IsInvalid(err))
 		sm := err.(*spanfilter.Map) //nolint:errorlint
-		So(sm.Invalid[spanfilter.InvalidTraceID], ShouldResemble, []string{"invalidTraceID:DFEC5BE6328C3A"})
-		So(sm.Invalid[spanfilter.InvalidSpanID], ShouldResemble, []string{"fa281a8955571a3a:" + spanfilter.InvalidSpanID})
-		So(got, ShouldNotBeNil)
+		assert.Equal(t, []string{"invalidTraceID:DFEC5BE6328C3A"}, sm.Invalid[spanfilter.InvalidTraceID])
+		assert.Equal(t, []string{"fa281a8955571a3a:" + spanfilter.InvalidSpanID}, sm.Invalid[spanfilter.InvalidSpanID])
+		assert.NotNil(t, got)
 
 		// assert that the returned batches match the desired batches
 		require.Equal(t, len(wantPostRequest), len(got))
 		assertSpansAreEqual(t, wantPostRequest, got)
 	})
 
-	Convey("Bad SignalFx (Zipkin V2) trace with binary annotations returns an error", t, func() {
+	t.Run("Bad SignalFx (Zipkin V2) trace with binary annotations returns an error", func(t *testing.T) {
 		sourceSpans := []*InputSpan{
 			{
 				Span: trace.Span{
@@ -1998,7 +1996,7 @@ func TestParseJaegerFromRequest(t *testing.T) {
 		assert.Error(t, err)
 	})
 
-	Convey("Zipkin v1 with binary annotations gets converted", t, func() {
+	t.Run("Zipkin v1 with binary annotations gets converted", func(t *testing.T) {
 		frontend := &trace.Endpoint{
 			ServiceName: pointer.String("frontend"),
 			Ipv4:        pointer.String("127.0.0.1"),
@@ -2088,7 +2086,7 @@ func TestParseJaegerFromRequest(t *testing.T) {
 		assertSpansAreEqual(t, want, got)
 	})
 
-	Convey("Bad Zipkin v1 with invalid binary annotation values returns an error", t, func() {
+	t.Run("Bad Zipkin v1 with invalid binary annotation values returns an error", func(t *testing.T) {
 		span := `[
 					{
 						"traceId":"1",
@@ -2114,7 +2112,7 @@ func TestParseJaegerFromRequest(t *testing.T) {
 		assert.Error(t, err)
 	})
 
-	Convey("malformed payload should return a marshal error", t, func() {
+	t.Run("malformed payload should return a marshal error", func(t *testing.T) {
 		req := httptest.NewRequest("POST", "/v1/trace", strings.NewReader("{{},"))
 
 		// parse the request and get the jaeger batch map

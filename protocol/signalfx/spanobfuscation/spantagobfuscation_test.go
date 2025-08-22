@@ -9,7 +9,8 @@ import (
 	"github.com/signalfx/golib/v3/event"
 	"github.com/signalfx/golib/v3/pointer"
 	"github.com/signalfx/golib/v3/trace"
-	. "github.com/smartystreets/goconvey/convey"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 type obfend struct{}
@@ -27,88 +28,85 @@ func (e *obfend) AddEvents(ctx context.Context, events []*event.Event) error {
 }
 
 func TestObfuscate(t *testing.T) {
-	Convey("Given a SpanTagRemoval config", t, func() {
-		config := []*TagMatchRuleConfig{
-			{
-				Service: pointer.String("test-service"),
-				Tags:    []string{"obfuscate-me"},
-			},
-			{
-				Service:   pointer.String("some*service"),
-				Operation: pointer.String("sensitive*"),
-				Tags:      []string{"PII", "SSN"},
-			},
-		}
-		obf, _ := NewObf(config, &obfend{})
-		Convey("should obfuscate tag from exact-match service", func() {
-			spans := []*trace.Span{makeSpan("test-service", "shouldn't matter", map[string]string{"obfuscate-me": "val"})}
-			obf.AddSpans(context.Background(), spans)
-			So(spans[0].Tags, ShouldResemble, map[string]string{"obfuscate-me": OBFUSCATED})
-		})
-		Convey("should not obfuscate tag from exact-match service as prefix", func() {
-			spans := []*trace.Span{makeSpan("false-test-service", "shouldn't matter", map[string]string{"obfuscate-me": "val"})}
-			obf.AddSpans(context.Background(), spans)
-			So(spans[0].Tags, ShouldResemble, map[string]string{"obfuscate-me": "val"})
-		})
-		Convey("should not obfuscate tag from exact-match service as suffix", func() {
-			spans := []*trace.Span{makeSpan("test-service-extra", "shouldn't matter", map[string]string{"obfuscate-me": "val"})}
-			obf.AddSpans(context.Background(), spans)
-			So(spans[0].Tags, ShouldResemble, map[string]string{"obfuscate-me": "val"})
-		})
-		Convey("should obfuscate tag from matching wildcard service and operation", func() {
-			spans := []*trace.Span{makeSpan("some-test-service", "sensitive-data-leak", map[string]string{"PII": "val"})}
-			obf.AddSpans(context.Background(), spans)
-			So(spans[0].Tags, ShouldResemble, map[string]string{"PII": OBFUSCATED})
-		})
-		Convey("should not obfuscate tag with mismatched tag name", func() {
-			spans := []*trace.Span{makeSpan("some-test-service", "sensitive-data-leak", map[string]string{"obfuscate-me": "val"})}
-			obf.AddSpans(context.Background(), spans)
-			So(spans[0].Tags, ShouldResemble, map[string]string{"obfuscate-me": "val"})
-		})
-		Convey("should not obfuscate tag with matching service but unmatched operation", func() {
-			spans := []*trace.Span{makeSpan("some-test-service", "secure-op", map[string]string{"PII": "val"})}
-			obf.AddSpans(context.Background(), spans)
-			So(spans[0].Tags, ShouldResemble, map[string]string{"PII": "val"})
-		})
-		Convey("should obfuscate all tags defined in the removal rule", func() {
-			spans := []*trace.Span{makeSpan("some-test-service", "sensitive-data-leak", map[string]string{"PII": "val", "SSN": "111-22-3333"})}
-			obf.AddSpans(context.Background(), spans)
-			So(spans[0].Tags, ShouldResemble, map[string]string{"PII": OBFUSCATED, "SSN": OBFUSCATED})
-		})
-		Convey("should handle an empty span", func() {
-			spans := []*trace.Span{{}}
-			err := obf.AddSpans(context.Background(), spans)
-			So(err, ShouldBeNil)
-		})
-		Convey("should handle a span with an empty service", func() {
-			spans := []*trace.Span{{LocalEndpoint: &trace.Endpoint{}}}
-			err := obf.AddSpans(context.Background(), spans)
-			So(err, ShouldBeNil)
-		})
+	config := []*TagMatchRuleConfig{
+		{
+			Service: pointer.String("test-service"),
+			Tags:    []string{"obfuscate-me"},
+		},
+		{
+			Service:   pointer.String("some*service"),
+			Operation: pointer.String("sensitive*"),
+			Tags:      []string{"PII", "SSN"},
+		},
+	}
+	obf, err := NewObf(config, &obfend{})
+	require.NoError(t, err)
+	t.Run("should obfuscate tag from exact-match service", func(t *testing.T) {
+		spans := []*trace.Span{makeSpan("test-service", "shouldn't matter", map[string]string{"obfuscate-me": "val"})}
+		obf.AddSpans(context.Background(), spans)
+		assert.Equal(t, map[string]string{"obfuscate-me": OBFUSCATED}, spans[0].Tags)
+	})
+	t.Run("should not obfuscate tag from exact-match service as prefix", func(t *testing.T) {
+		spans := []*trace.Span{makeSpan("false-test-service", "shouldn't matter", map[string]string{"obfuscate-me": "val"})}
+		obf.AddSpans(context.Background(), spans)
+		assert.Equal(t, map[string]string{"obfuscate-me": "val"}, spans[0].Tags)
+	})
+	t.Run("should not obfuscate tag from exact-match service as suffix", func(t *testing.T) {
+		spans := []*trace.Span{makeSpan("test-service-extra", "shouldn't matter", map[string]string{"obfuscate-me": "val"})}
+		obf.AddSpans(context.Background(), spans)
+		assert.Equal(t, map[string]string{"obfuscate-me": "val"}, spans[0].Tags)
+	})
+	t.Run("should obfuscate tag from matching wildcard service and operation", func(t *testing.T) {
+		spans := []*trace.Span{makeSpan("some-test-service", "sensitive-data-leak", map[string]string{"PII": "val"})}
+		obf.AddSpans(context.Background(), spans)
+		assert.Equal(t, map[string]string{"PII": OBFUSCATED}, spans[0].Tags)
+	})
+	t.Run("should not obfuscate tag with mismatched tag name", func(t *testing.T) {
+		spans := []*trace.Span{makeSpan("some-test-service", "sensitive-data-leak", map[string]string{"obfuscate-me": "val"})}
+		obf.AddSpans(context.Background(), spans)
+		assert.Equal(t, map[string]string{"obfuscate-me": "val"}, spans[0].Tags)
+	})
+	t.Run("should not obfuscate tag with matching service but unmatched operation", func(t *testing.T) {
+		spans := []*trace.Span{makeSpan("some-test-service", "secure-op", map[string]string{"PII": "val"})}
+		obf.AddSpans(context.Background(), spans)
+		assert.Equal(t, map[string]string{"PII": "val"}, spans[0].Tags)
+	})
+	t.Run("should obfuscate all tags defined in the removal rule", func(t *testing.T) {
+		spans := []*trace.Span{makeSpan("some-test-service", "sensitive-data-leak", map[string]string{"PII": "val", "SSN": "111-22-3333"})}
+		obf.AddSpans(context.Background(), spans)
+		assert.Equal(t, map[string]string{"PII": OBFUSCATED, "SSN": OBFUSCATED}, spans[0].Tags)
+	})
+	t.Run("should handle an empty span", func(t *testing.T) {
+		spans := []*trace.Span{{}}
+		err := obf.AddSpans(context.Background(), spans)
+		assert.NoError(t, err)
+	})
+	t.Run("should handle a span with an empty service", func(t *testing.T) {
+		spans := []*trace.Span{{LocalEndpoint: &trace.Endpoint{}}}
+		err := obf.AddSpans(context.Background(), spans)
+		assert.NoError(t, err)
 	})
 }
 
-func TestNewObfBad(t *testing.T) {
-	Convey("test missing tags", t, func() {
-		_, err := NewObf([]*TagMatchRuleConfig{{}}, &obfend{})
-		So(err, ShouldNotBeNil)
-	})
-	Convey("test empty tag name", t, func() {
-		_, err := NewObf([]*TagMatchRuleConfig{{Tags: []string{""}}}, &obfend{})
-		So(err, ShouldNotBeNil)
-	})
-	Convey("test empty tags array", t, func() {
-		_, err := NewObf([]*TagMatchRuleConfig{{Tags: []string{}}}, &obfend{})
-		So(err, ShouldNotBeNil)
-	})
+func TestNewObfMissingTags(t *testing.T) {
+	_, err := NewObf([]*TagMatchRuleConfig{{}}, &obfend{})
+	assert.Error(t, err)
+}
+
+func TestNewObfEmptyTagName(t *testing.T) {
+	_, err := NewObf([]*TagMatchRuleConfig{{Tags: []string{""}}}, &obfend{})
+	assert.Error(t, err)
+}
+
+func TestNewObfEmptyTagsArray(t *testing.T) {
+	_, err := NewObf([]*TagMatchRuleConfig{{Tags: []string{}}}, &obfend{})
+	assert.Error(t, err)
 }
 
 func TestObfPassthrough(t *testing.T) {
-	Convey("test passthroughs", t, func() {
-		obf := &SpanTagObfuscation{next: &obfend{}}
-		So(obf.AddDatapoints(context.Background(), []*datapoint.Datapoint{}), ShouldBeNil)
-		So(obf.AddEvents(context.Background(), []*event.Event{}), ShouldBeNil)
-	})
+	obf := &SpanTagObfuscation{next: &obfend{}}
+	assert.NoError(t, obf.AddDatapoints(context.Background(), []*datapoint.Datapoint{}))
+	assert.NoError(t, obf.AddEvents(context.Background(), []*event.Event{}))
 }
 
 func BenchmarkObfOne(b *testing.B) {

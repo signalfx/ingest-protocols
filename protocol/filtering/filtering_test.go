@@ -5,7 +5,8 @@ import (
 
 	"github.com/signalfx/golib/v3/datapoint"
 	"github.com/signalfx/golib/v3/datapoint/dptest"
-	. "github.com/smartystreets/goconvey/convey"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 type TestFilteredForwarder struct {
@@ -18,108 +19,108 @@ func Test(t *testing.T) {
 		cpuIdleString = "cpu.idle"
 	)
 
-	Convey("bad regexes throw errors", t, func() {
+	t.Run("bad regexes throw errors", func(t *testing.T) {
 		filters := FilterObj{
 			Deny: []string{"["},
 		}
 		forwarder := TestFilteredForwarder{}
 		err := forwarder.Setup(&filters)
-		So(err, ShouldNotBeNil)
+		assert.NotNil(t, err)
 		filters = FilterObj{
 			Allow: []string{"["},
 		}
 		err = forwarder.Setup(&filters)
-		So(err, ShouldNotBeNil)
+		assert.NotNil(t, err)
 	})
-	Convey("good regexes don't throw errors and work together", t, func() {
+	t.Run("good regexes don't throw errors and work together", func(t *testing.T) {
 		filters := FilterObj{
 			Deny:  []string{"^cpu.*"},
 			Allow: []string{"^cpu.idle"},
 		}
 		forwarder := TestFilteredForwarder{}
 		err := forwarder.Setup(&filters)
-		So(err, ShouldBeNil)
+		require.NoError(t, err)
 		dp := dptest.DP()
-		Convey("cpu.idle is allowed even though cpu.* is denied", func() {
+		t.Run("cpu.idle is allowed even though cpu.* is denied", func(t *testing.T) {
 			dp.Metric = cpuIdleString
 			datapoints := forwarder.FilterDatapoints([]*datapoint.Datapoint{dp})
-			So(len(datapoints), ShouldEqual, 1)
-			So(forwarder.FilteredDatapoints, ShouldEqual, 0)
-			Convey("metrics that match deny but not allow are denied", func() {
+			assert.Equal(t, 1, len(datapoints))
+			assert.Equal(t, int64(0), forwarder.FilteredDatapoints)
+			t.Run("metrics that match deny but not allow are denied", func(t *testing.T) {
 				dp.Metric = "cpu.user"
-				So(forwarder.FilteredDatapoints, ShouldEqual, 0)
+				assert.Equal(t, int64(0), forwarder.FilteredDatapoints)
 				datapoints := forwarder.FilterDatapoints([]*datapoint.Datapoint{dp})
-				So(len(datapoints), ShouldEqual, 0)
-				So(forwarder.FilteredDatapoints, ShouldEqual, 1)
-				Convey("other metrics that do not explicitly pass allow are denied", func() {
+				assert.Equal(t, 0, len(datapoints))
+				assert.Equal(t, int64(1), forwarder.FilteredDatapoints)
+				t.Run("other metrics that do not explicitly pass allow are denied", func(t *testing.T) {
 					dp.Metric = "i.should.be.denied"
 					datapoints := forwarder.FilterDatapoints([]*datapoint.Datapoint{dp})
-					So(len(datapoints), ShouldEqual, 0)
-					So(forwarder.FilteredDatapoints, ShouldEqual, 2)
+					assert.Equal(t, 0, len(datapoints))
+					assert.Equal(t, int64(2), forwarder.FilteredDatapoints)
 				})
 			})
 		})
 	})
-	Convey("allow by itself denies what it doesn't match", t, func() {
+	t.Run("allow by itself denies what it doesn't match", func(t *testing.T) {
 		filters := FilterObj{
 			Allow: []string{"^cpu.*"},
 		}
 		forwarder := TestFilteredForwarder{}
 		err := forwarder.Setup(&filters)
-		So(err, ShouldBeNil)
+		require.NoError(t, err)
 		dp := dptest.DP()
-		Convey("metrics starting with cpu get accepted", func() {
+		t.Run("metrics starting with cpu get accepted", func(t *testing.T) {
 			dp.Metric = cpuIdleString
 			datapoints := forwarder.FilterDatapoints([]*datapoint.Datapoint{dp})
-			So(len(datapoints), ShouldEqual, 1)
-			So(forwarder.FilteredDatapoints, ShouldEqual, 0)
-			Convey("metrics that don't match allow are denied", func() {
+			assert.Equal(t, 1, len(datapoints))
+			assert.Equal(t, int64(0), forwarder.FilteredDatapoints)
+			t.Run("metrics that don't match allow are denied", func(t *testing.T) {
 				dp.Metric = imNotAMatcher
 				datapoints := forwarder.FilterDatapoints([]*datapoint.Datapoint{dp})
-				So(len(datapoints), ShouldEqual, 0)
-				So(forwarder.FilteredDatapoints, ShouldEqual, 1)
+				assert.Equal(t, 0, len(datapoints))
+				assert.Equal(t, int64(1), forwarder.FilteredDatapoints)
 			})
 		})
 	})
-	Convey("deny by itself accepts what it doesn't match", t, func() {
+	t.Run("deny by itself accepts what it doesn't match", func(t *testing.T) {
 		filters := FilterObj{
 			Deny: []string{"^cpu.*"},
 		}
 		forwarder := TestFilteredForwarder{}
 		err := forwarder.Setup(&filters)
-		So(err, ShouldBeNil)
+		require.NoError(t, err)
 		dp := dptest.DP()
-		Convey("metrics starting with cpu get denied", func() {
+		t.Run("metrics starting with cpu get denied", func(t *testing.T) {
 			dp.Metric = cpuIdleString
 			datapoints := forwarder.FilterDatapoints([]*datapoint.Datapoint{dp})
-			So(len(datapoints), ShouldEqual, 0)
-			So(forwarder.FilteredDatapoints, ShouldEqual, 1)
-			Convey("metrics that don't match cpu are acccepted", func() {
+			assert.Equal(t, 0, len(datapoints))
+			assert.Equal(t, int64(1), forwarder.FilteredDatapoints)
+			t.Run("metrics that don't match cpu are accepted", func(t *testing.T) {
 				dp.Metric = imNotAMatcher
 				datapoints := forwarder.FilterDatapoints([]*datapoint.Datapoint{dp})
-				So(len(datapoints), ShouldEqual, 1)
-				So(forwarder.FilteredDatapoints, ShouldEqual, 1)
-				So(len(forwarder.GetFilteredDatapoints()), ShouldEqual, 1)
+				assert.Equal(t, 1, len(datapoints))
+				assert.Equal(t, int64(1), forwarder.FilteredDatapoints)
+				assert.Equal(t, 1, len(forwarder.GetFilteredDatapoints()))
 			})
 		})
 	})
-	Convey("no rules let everything through", t, func() {
+	t.Run("no rules let everything through", func(t *testing.T) {
 		filters := FilterObj{}
 		forwarder := TestFilteredForwarder{}
 		err := forwarder.Setup(&filters)
-		So(err, ShouldBeNil)
+		require.NoError(t, err)
 		dp := dptest.DP()
-		Convey("metrics starting with cpu get denied", func() {
+		t.Run("metrics starting with cpu get accepted", func(t *testing.T) {
 			dp.Metric = cpuIdleString
 			datapoints := forwarder.FilterDatapoints([]*datapoint.Datapoint{dp})
-			So(len(datapoints), ShouldEqual, 1)
-			So(forwarder.FilteredDatapoints, ShouldEqual, 0)
-			Convey("metrics that don't match cpu are acccepted", func() {
+			assert.Equal(t, 1, len(datapoints))
+			assert.Equal(t, int64(0), forwarder.FilteredDatapoints)
+			t.Run("metrics that don't match cpu are accepted", func(t *testing.T) {
 				dp.Metric = imNotAMatcher
 				datapoints := forwarder.FilterDatapoints([]*datapoint.Datapoint{dp})
-				So(len(datapoints), ShouldEqual, 1)
-				So(forwarder.FilteredDatapoints, ShouldEqual, 0)
-				So(len(forwarder.GetFilteredDatapoints()), ShouldEqual, 1)
+				assert.Equal(t, 1, len(datapoints))
+				assert.Equal(t, int64(0), forwarder.FilteredDatapoints)
+				assert.Equal(t, 1, len(forwarder.GetFilteredDatapoints()))
 			})
 		})
 	})

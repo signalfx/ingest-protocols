@@ -17,7 +17,7 @@ import (
 	"github.com/signalfx/golib/v3/pointer"
 	"github.com/signalfx/golib/v3/trace"
 	splunksapm "github.com/signalfx/sapm-proto/gen"
-	. "github.com/smartystreets/goconvey/convey"
+	"github.com/stretchr/testify/assert"
 )
 
 var errRead = errors.New("could not read")
@@ -493,22 +493,22 @@ func TestJaegerThriftToSAPMDecoder(t *testing.T) {
 	}
 	decoder := NewJaegerThriftToSAPMDecoder()
 
-	Convey("Bad request body should error out", t, func() {
+	t.Run("bad request body should error out", func(t *testing.T) {
 		req := http.Request{
 			Body: ioutil.NopCloser(&errorReader{}),
 		}
 		_, err = decoder.Read(context.Background(), &req)
 
-		So(err.Error(), ShouldEqual, "could not read request body")
+		assert.Equal(t, "could not read request body", err.Error())
 	})
 
-	Convey("Spans should be decoded properly", t, func() {
+	t.Run("spans should be decoded properly", func(t *testing.T) {
 		req := http.Request{
 			Body: reqBody,
 		}
 		spans, err := decoder.Read(context.Background(), &req)
-		So(err, ShouldBeNil)
-		So(spans, ShouldResemble, desired)
+		assert.NoError(t, err)
+		assert.Equal(t, desired, spans)
 	})
 }
 
@@ -530,24 +530,24 @@ func TestJaegerTraceDecoder(t *testing.T) {
 			},
 		})
 
-	Convey("Bad request body should error out", t, func() {
+	t.Run("bad request body should error out", func(t *testing.T) {
 		req := http.Request{
 			Body: ioutil.NopCloser(&errorReader{}),
 		}
 		err = decoder.Read(context.Background(), &req)
 
-		So(err.Error(), ShouldEqual, "could not read request body")
+		assert.Equal(t, "could not read request body", err.Error())
 	})
 
-	Convey("Spans should be decoded properly", t, func() {
+	t.Run("spans should be decoded properly", func(t *testing.T) {
 		req := http.Request{
 			Body: reqBody,
 		}
 		err = decoder.Read(context.Background(), &req)
 
-		So(err, ShouldBeNil)
+		assert.NoError(t, err)
 
-		So(spans, ShouldResemble, []*trace.Span{
+		assert.Equal(t, []*trace.Span{
 			{
 				TraceID:  "52969a8955571a3f",
 				ParentID: pointer.String("000000000068c4e3"),
@@ -672,7 +672,7 @@ func TestJaegerTraceDecoder(t *testing.T) {
 					"jaeger.version": "Python-3.1.0",
 				},
 			},
-		})
+		}, spans)
 	})
 }
 

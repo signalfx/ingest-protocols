@@ -14,7 +14,8 @@ import (
 	"github.com/signalfx/golib/v3/nettest"
 	"github.com/signalfx/golib/v3/pointer"
 	"github.com/signalfx/golib/v3/web"
-	. "github.com/smartystreets/goconvey/convey"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 type listenerServer struct {
@@ -42,51 +43,50 @@ func (c *listenerServer) Datapoints() []*datapoint.Datapoint {
 
 var _ Listener = &listenerServer{}
 
-func grabHealthCheck(baseURI string, status int) {
+func grabHealthCheck(t *testing.T, baseURI string, expectedStatus int) {
+	t.Helper()
 	client := http.Client{}
 	req, err := http.NewRequestWithContext(context.Background(), "GET", baseURI+"/healthz", nil)
-	So(err, ShouldBeNil)
+	require.NoError(t, err)
 	resp, err := client.Do(req)
-	So(err, ShouldBeNil)
+	require.NoError(t, err)
 	resp.Body.Close()
-	So(resp.StatusCode, ShouldEqual, status)
+	assert.Equal(t, expectedStatus, resp.StatusCode)
 }
 
 func TestHealthCheck(t *testing.T) {
-	Convey("with a listener we setup the health check", t, func() {
-		listenAddr := "127.0.0.1:0"
-		sendTo := dptest.NewBasicSink()
-		sendTo.Resize(1)
-		listener, err := net.Listen("tcp", listenAddr)
-		So(err, ShouldBeNil)
-		r := mux.NewRouter()
-		fullHandler := web.NewHandler(context.Background(), web.FromHTTP(r))
-		listenServer := &listenerServer{
-			listener: listener,
-			server: http.Server{
-				Handler: fullHandler,
-				Addr:    listener.Addr().String(),
-			},
-		}
-		baseURI := fmt.Sprintf("http://127.0.0.1:%d", nettest.TCPPort(listener))
-		So(listener.Addr(), ShouldNotBeNil)
-		listenServer.SetupHealthCheck(pointer.String("/healthz"), r, log.Discard)
-		go func() {
-			err := listenServer.server.Serve(listener)
-			log.IfErr(log.Discard, err)
-		}()
-		Convey("Should expose health check", func() {
-			grabHealthCheck(baseURI, http.StatusOK)
-			dp := listenServer.HealthDatapoints()
-			So(len(dp), ShouldEqual, 1)
-			So(dp[0].Value, ShouldEqual, 1)
-			Convey("and we close the health check", func() {
-				listenServer.CloseHealthCheck()
-				grabHealthCheck(baseURI, http.StatusNotFound)
-				dp := listenServer.HealthDatapoints()
-				So(len(dp), ShouldEqual, 1)
-				So(dp[0].Value, ShouldEqual, 2)
-			})
-		})
-	})
+	listenAddr := "127.0.0.1:0"
+	sendTo := dptest.NewBasicSink()
+	sendTo.Resize(1)
+	listener, err := net.Listen("tcp", listenAddr)
+	require.NoError(t, err)
+	r := mux.NewRouter()
+	fullHandler := web.NewHandler(context.Background(), web.FromHTTP(r))
+	listenServer := &listenerServer{
+		listener: listener,
+		server: http.Server{
+			Handler: fullHandler,
+			Addr:    listener.Addr().String(),
+		},
+	}
+	baseURI := fmt.Sprintf("http://127.0.0.1:%d", nettest.TCPPort(listener))
+	require.NotNil(t, listener.Addr())
+	listenServer.SetupHealthCheck(pointer.String("/healthz"), r, log.Discard)
+	go func() {
+		err := listenServer.server.Serve(listener)
+		log.IfErr(log.Discard, err)
+	}()
+
+	// Should expose health check
+	grabHealthCheck(t, baseURI, http.StatusOK)
+	dp := listenServer.HealthDatapoints()
+	assert.Equal(t, 1, len(dp))
+	assert.EqualValues(t, 1, dp[0].Value)
+
+	// Close the health check
+	listenServer.CloseHealthCheck()
+	grabHealthCheck(t, baseURI, http.StatusNotFound)
+	dp = listenServer.HealthDatapoints()
+	assert.Equal(t, 1, len(dp))
+	assert.EqualValues(t, 2, dp[0].Value)
 }

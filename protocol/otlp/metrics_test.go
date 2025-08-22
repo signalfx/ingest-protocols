@@ -20,7 +20,7 @@ import (
 	"time"
 
 	"github.com/signalfx/golib/v3/datapoint"
-	. "github.com/smartystreets/goconvey/convey"
+	"github.com/stretchr/testify/assert"
 	metricsservicev1 "go.opentelemetry.io/proto/otlp/collector/metrics/v1"
 	commonv1 "go.opentelemetry.io/proto/otlp/common/v1"
 	metricsv1 "go.opentelemetry.io/proto/otlp/metrics/v1"
@@ -593,126 +593,122 @@ func Test_FromMetrics(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		Convey(tt.name, t, func() {
+		t.Run(tt.name, func(t *testing.T) {
 			rms := tt.metricsFn()
 			gotSfxDataPoints := FromOTLPMetricRequest(&metricsservicev1.ExportMetricsServiceRequest{ResourceMetrics: rms})
-			So(tt.wantSfxDataPoints, ShouldResemble, gotSfxDataPoints)
+			assert.Equal(t, tt.wantSfxDataPoints, gotSfxDataPoints)
 
 			firstMetric := rms[0].GetScopeMetrics()[0].Metrics[0]
 			dpsFromMetric := FromMetric(firstMetric)
-			So(dpsFromMetric, ShouldNotBeEmpty)
+			assert.NotEmpty(t, dpsFromMetric)
 		})
 	}
 }
 
 func TestMetricTypeDerive(t *testing.T) {
-	Convey("deriveSignalFxMetricType panics if invalid metric", t, func() {
-		So(func() { deriveSignalFxMetricType(&metricsv1.Metric{}) }, ShouldPanic)
-	})
+	assert.Panics(t, func() { deriveSignalFxMetricType(&metricsv1.Metric{}) })
 }
 
 func TestAttributesToDimensions(t *testing.T) {
-	Convey("stringifyAttributes", t, func() {
-		attrs := []*commonv1.KeyValue{
-			{
-				Key:   "a",
-				Value: &commonv1.AnyValue{Value: &commonv1.AnyValue_StringValue{StringValue: "s"}},
-			},
-			{
-				Key:   "b",
-				Value: &commonv1.AnyValue{Value: &commonv1.AnyValue_StringValue{StringValue: ""}},
-			},
-			{
-				Key:   "c",
-				Value: &commonv1.AnyValue{Value: &commonv1.AnyValue_BoolValue{BoolValue: true}},
-			},
-			{
-				Key:   "d",
-				Value: &commonv1.AnyValue{Value: &commonv1.AnyValue_IntValue{IntValue: 44}},
-			},
-			{
-				Key:   "e",
-				Value: &commonv1.AnyValue{Value: &commonv1.AnyValue_DoubleValue{DoubleValue: 45.1}},
-			},
-			{
-				Key: "f",
-				Value: &commonv1.AnyValue{
-					Value: &commonv1.AnyValue_ArrayValue{
-						ArrayValue: &commonv1.ArrayValue{
-							Values: []*commonv1.AnyValue{
-								{Value: &commonv1.AnyValue_StringValue{StringValue: "n1"}},
-								{Value: &commonv1.AnyValue_StringValue{StringValue: "n2"}},
-							},
+	attrs := []*commonv1.KeyValue{
+		{
+			Key:   "a",
+			Value: &commonv1.AnyValue{Value: &commonv1.AnyValue_StringValue{StringValue: "s"}},
+		},
+		{
+			Key:   "b",
+			Value: &commonv1.AnyValue{Value: &commonv1.AnyValue_StringValue{StringValue: ""}},
+		},
+		{
+			Key:   "c",
+			Value: &commonv1.AnyValue{Value: &commonv1.AnyValue_BoolValue{BoolValue: true}},
+		},
+		{
+			Key:   "d",
+			Value: &commonv1.AnyValue{Value: &commonv1.AnyValue_IntValue{IntValue: 44}},
+		},
+		{
+			Key:   "e",
+			Value: &commonv1.AnyValue{Value: &commonv1.AnyValue_DoubleValue{DoubleValue: 45.1}},
+		},
+		{
+			Key: "f",
+			Value: &commonv1.AnyValue{
+				Value: &commonv1.AnyValue_ArrayValue{
+					ArrayValue: &commonv1.ArrayValue{
+						Values: []*commonv1.AnyValue{
+							{Value: &commonv1.AnyValue_StringValue{StringValue: "n1"}},
+							{Value: &commonv1.AnyValue_StringValue{StringValue: "n2"}},
 						},
 					},
 				},
 			},
-			{
-				Key: "g",
-				Value: &commonv1.AnyValue{
-					Value: &commonv1.AnyValue_KvlistValue{
-						KvlistValue: &commonv1.KeyValueList{
-							Values: []*commonv1.KeyValue{
-								{Key: "k1", Value: &commonv1.AnyValue{Value: &commonv1.AnyValue_StringValue{StringValue: "n1"}}},
-								{Key: "k2", Value: &commonv1.AnyValue{Value: &commonv1.AnyValue_BoolValue{BoolValue: false}}},
-								{Key: "k3", Value: nil},
-								{Key: "k4", Value: &commonv1.AnyValue{Value: &commonv1.AnyValue_DoubleValue{DoubleValue: 40.3}}},
-								{Key: "k5", Value: &commonv1.AnyValue{Value: &commonv1.AnyValue_IntValue{IntValue: 41}}},
-								{Key: "k6", Value: &commonv1.AnyValue{Value: &commonv1.AnyValue_BytesValue{BytesValue: []byte("n2")}}},
-							},
+		},
+		{
+			Key: "g",
+			Value: &commonv1.AnyValue{
+				Value: &commonv1.AnyValue_KvlistValue{
+					KvlistValue: &commonv1.KeyValueList{
+						Values: []*commonv1.KeyValue{
+							{Key: "k1", Value: &commonv1.AnyValue{Value: &commonv1.AnyValue_StringValue{StringValue: "n1"}}},
+							{Key: "k2", Value: &commonv1.AnyValue{Value: &commonv1.AnyValue_BoolValue{BoolValue: false}}},
+							{Key: "k3", Value: nil},
+							{Key: "k4", Value: &commonv1.AnyValue{Value: &commonv1.AnyValue_DoubleValue{DoubleValue: 40.3}}},
+							{Key: "k5", Value: &commonv1.AnyValue{Value: &commonv1.AnyValue_IntValue{IntValue: 41}}},
+							{Key: "k6", Value: &commonv1.AnyValue{Value: &commonv1.AnyValue_BytesValue{BytesValue: []byte("n2")}}},
 						},
 					},
 				},
 			},
-			{
-				Key:   "h",
-				Value: nil,
-			},
-			{
-				Key:   "i",
-				Value: &commonv1.AnyValue{Value: &commonv1.AnyValue_DoubleValue{DoubleValue: 0}},
-			},
-			{
-				Key:   "j",
-				Value: &commonv1.AnyValue{Value: nil},
-			},
-			{
-				Key:   "k",
-				Value: &commonv1.AnyValue{Value: &commonv1.AnyValue_BytesValue{BytesValue: []byte("to boldly go")}},
-			},
-		}
+		},
+		{
+			Key:   "h",
+			Value: nil,
+		},
+		{
+			Key:   "i",
+			Value: &commonv1.AnyValue{Value: &commonv1.AnyValue_DoubleValue{DoubleValue: 0}},
+		},
+		{
+			Key:   "j",
+			Value: &commonv1.AnyValue{Value: nil},
+		},
+		{
+			Key:   "k",
+			Value: &commonv1.AnyValue{Value: &commonv1.AnyValue_BytesValue{BytesValue: []byte("to boldly go")}},
+		},
+	}
 
-		dimKVs := stringifyAttributes(attrs)
-		var m SignalFxMetric
-		m.DP.Attributes = dimKVs
-		So(m.ToDatapoint().Dimensions, ShouldResemble, map[string]string{
-			"a": "s",
-			"c": "true",
-			"d": "44",
-			"e": "45.1",
-			"f": `["n1","n2"]`,
-			"g": `{"k1":"n1","k2":false,"k3":null,"k4":40.3,"k5":41,"k6":"bjI="}`,
-			"i": "0",
-			// No entry for "j" because it's nil and would be skipped by ToDatapoint()
-			"k": "dG8gYm9sZGx5IGdv",
-		})
-	})
+	dimKVs := stringifyAttributes(attrs)
+	var m SignalFxMetric
+	m.DP.Attributes = dimKVs
+	assert.Equal(t, map[string]string{
+		"a": "s",
+		"c": "true",
+		"d": "44",
+		"e": "45.1",
+		"f": `["n1","n2"]`,
+		"g": `{"k1":"n1","k2":false,"k3":null,"k4":40.3,"k5":41,"k6":"bjI="}`,
+		"i": "0",
+		// No entry for "j" because it's nil and would be skipped by ToDatapoint()
+		"k": "dG8gYm9sZGx5IGdv",
+	}, m.ToDatapoint().Dimensions)
+}
 
-	Convey("Non-string attributes in SignalFxMetric panic", t, func() {
-		attrs := []*commonv1.KeyValue{
-			{
-				Key:   "a",
-				Value: nil,
-			},
-			{
-				Key:   "c",
-				Value: &commonv1.AnyValue{Value: &commonv1.AnyValue_BoolValue{BoolValue: true}},
-			},
-		}
-		var m SignalFxMetric
-		m.DP.Attributes = attrs
-		So(func() { m.ToDatapoint() }, ShouldPanic)
-	})
+func TestNonStringAttributesPanic(t *testing.T) {
+	attrs := []*commonv1.KeyValue{
+		{
+			Key:   "a",
+			Value: nil,
+		},
+		{
+			Key:   "c",
+			Value: &commonv1.AnyValue{Value: &commonv1.AnyValue_BoolValue{BoolValue: true}},
+		},
+	}
+	var m SignalFxMetric
+	m.DP.Attributes = attrs
+	assert.Panics(t, func() { m.ToDatapoint() })
 }
 
 func doubleSFxDataPoint(

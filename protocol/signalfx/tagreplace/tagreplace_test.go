@@ -8,7 +8,8 @@ import (
 	"github.com/signalfx/golib/v3/event"
 	"github.com/signalfx/golib/v3/pointer"
 	"github.com/signalfx/golib/v3/trace"
-	. "github.com/smartystreets/goconvey/convey"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 type end struct{}
@@ -25,30 +26,30 @@ func (e *end) AddEvents(ctx context.Context, events []*event.Event) error {
 	return nil
 }
 
-func Test(t *testing.T) {
+func TestTagReplace(t *testing.T) {
 	cases := []struct {
-		desc       string
+		name       string
 		rules      []string
 		inputSpan  *trace.Span
 		outputSpan *trace.Span
 		exitEarly  bool
 	}{
 		{
-			desc:       "test single replacement",
+			name:       "single replacement",
 			rules:      []string{`^\/api\/v1\/document\/(?P<documentId>.*)\/update$`},
 			inputSpan:  &trace.Span{Name: pointer.String("/api/v1/document/321083210/update")},
 			outputSpan: &trace.Span{Name: pointer.String("/api/v1/document/{documentId}/update"), Tags: map[string]string{"documentId": "321083210"}},
 			exitEarly:  false,
 		},
 		{
-			desc:       "test multi replacement",
+			name:       "multi replacement",
 			rules:      []string{`^\/api\/(?P<version>.*)\/document\/(?P<documentId>.*)\/update$`},
 			inputSpan:  &trace.Span{Name: pointer.String("/api/v1/document/321083210/update")},
 			outputSpan: &trace.Span{Name: pointer.String("/api/{version}/document/{documentId}/update"), Tags: map[string]string{"documentId": "321083210", "version": "v1"}},
 			exitEarly:  false,
 		},
 		{
-			desc: "test exit early",
+			name: "exit early",
 			rules: []string{
 				`^\/api\/v1\/document\/(?P<documentId>.*)\/update$`,
 				`^\/api\/(?P<version>.*)\/document\/(?P<documentId>.*)\/update$`,
@@ -58,22 +59,20 @@ func Test(t *testing.T) {
 			exitEarly:  true,
 		},
 	}
-	Convey("test tag replace", t, func() {
-		for _, tc := range cases {
-			tc := tc
-			Convey("Testing case: "+tc.desc, func() {
-				e := &end{}
-				tr, err := New(tc.rules, tc.exitEarly, e)
-				So(err, ShouldBeNil)
-				So(tr, ShouldNotBeNil)
-				err = tr.AddSpans(context.Background(), []*trace.Span{tc.inputSpan})
-				So(err, ShouldBeNil)
 
-				So(*tc.inputSpan.Name, ShouldEqual, *tc.outputSpan.Name)
-				So(tc.inputSpan.Tags, ShouldResemble, tc.outputSpan.Tags)
-			})
-		}
-	})
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			e := &end{}
+			tr, err := New(tc.rules, tc.exitEarly, e)
+			require.NoError(t, err)
+			require.NotNil(t, tr)
+			err = tr.AddSpans(context.Background(), []*trace.Span{tc.inputSpan})
+			require.NoError(t, err)
+
+			assert.Equal(t, *tc.outputSpan.Name, *tc.inputSpan.Name)
+			assert.Equal(t, tc.outputSpan.Tags, tc.inputSpan.Tags)
+		})
+	}
 }
 
 func Benchmark(b *testing.B) {
@@ -89,22 +88,23 @@ func Benchmark(b *testing.B) {
 	tr.AddSpans(context.Background(), spans)
 }
 
-func TestBad(t *testing.T) {
-	Convey("test bad regex", t, func() {
-		_, err := New([]string{`ntId>.*)\/update$`}, false, &end{})
-		So(err, ShouldNotBeNil)
-	})
-	Convey("test no sub exp regex", t, func() {
-		_, err := New([]string{`^\/api\/version\/document\/documentId\/update$`}, false, &end{})
-		So(err, ShouldNotBeNil)
-	})
-	Convey("test non named sub exp regex", t, func() {
-		_, err := New([]string{`^\/api\/version\/document\/(.*)\/update$`}, false, &end{})
-		So(err, ShouldNotBeNil)
-	})
-	Convey("test passthroughs", t, func() {
-		tr := &TagReplace{next: &end{}}
-		So(tr.AddDatapoints(context.Background(), []*datapoint.Datapoint{}), ShouldBeNil)
-		So(tr.AddEvents(context.Background(), []*event.Event{}), ShouldBeNil)
-	})
+func TestTagReplaceBadRegex(t *testing.T) {
+	_, err := New([]string{`ntId>.*)\/update$`}, false, &end{})
+	assert.Error(t, err)
+}
+
+func TestTagReplaceNoSubExpRegex(t *testing.T) {
+	_, err := New([]string{`^\/api\/version\/document\/documentId\/update$`}, false, &end{})
+	assert.Error(t, err)
+}
+
+func TestTagReplaceNonNamedSubExpRegex(t *testing.T) {
+	_, err := New([]string{`^\/api\/version\/document\/(.*)\/update$`}, false, &end{})
+	assert.Error(t, err)
+}
+
+func TestTagReplacePassthroughs(t *testing.T) {
+	tr := &TagReplace{next: &end{}}
+	assert.NoError(t, tr.AddDatapoints(context.Background(), []*datapoint.Datapoint{}))
+	assert.NoError(t, tr.AddEvents(context.Background(), []*event.Event{}))
 }
