@@ -7,13 +7,10 @@ require (
 	github.com/gobwas/glob v0.2.3
 	github.com/gogo/protobuf v1.3.2
 	github.com/golang/protobuf v1.5.3
-	github.com/golang/snappy v0.0.4
 	github.com/gorilla/mux v1.8.1
 	github.com/jaegertracing/jaeger v1.38.0
 	github.com/mailru/easyjson v0.7.7
 	github.com/opentracing/opentracing-go v1.2.0
-	github.com/prometheus/common v0.37.0
-	github.com/prometheus/prometheus v0.38.0
 	github.com/signalfx/com_signalfx_metrics_protobuf v0.0.3
 	github.com/signalfx/gohelpers v0.0.0-20151202220853-ac9f0e053f15
 	github.com/signalfx/golib/v3 v3.3.55
