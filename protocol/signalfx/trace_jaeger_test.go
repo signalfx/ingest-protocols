@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"io/ioutil"
 	"net/http"
 	"strings"
@@ -18,6 +19,14 @@ import (
 	splunksapm "github.com/signalfx/sapm-proto/gen"
 	. "github.com/smartystreets/goconvey/convey"
 )
+
+var errRead = errors.New("could not read")
+
+type errorReader struct{}
+
+func (errorReader *errorReader) Read([]byte) (int, error) {
+	return 0, errRead
+}
 
 const jaegerBatchJSON = `
 {

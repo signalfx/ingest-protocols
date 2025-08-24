@@ -17,12 +17,9 @@ import (
 	jThriftConverter "github.com/jaegertracing/jaeger/model/converter/thrift/jaeger"
 	jThrift "github.com/jaegertracing/jaeger/thrift-gen/jaeger"
 	"github.com/opentracing/opentracing-go/ext"
-	"github.com/signalfx/golib/v3/datapoint/dpsink"
 	"github.com/signalfx/golib/v3/log"
 	"github.com/signalfx/golib/v3/pointer"
-	"github.com/signalfx/golib/v3/sfxclient"
 	"github.com/signalfx/golib/v3/trace"
-	"github.com/signalfx/golib/v3/web"
 	splunksapm "github.com/signalfx/sapm-proto/gen"
 )
 
@@ -110,15 +107,6 @@ func NewJaegerThriftTraceDecoderV1(logger log.Logger, sink trace.Sink) *JaegerTh
 		Logger:                  logger,
 		Sink:                    sink,
 	}
-}
-
-func setupThriftTraceV1(ctx context.Context, r *mux.Router, sink Sink, logger log.Logger, httpChain web.NextConstructor, counter *dpsink.Counter) sfxclient.Collector {
-	handler, st := SetupChain(ctx, sink, JaegerV1, func(s Sink) ErrorReader {
-		return NewJaegerThriftTraceDecoderV1(logger, sink)
-	}, httpChain, logger, counter)
-
-	SetupThriftByPaths(r, handler, DefaultTracePathV1)
-	return st
 }
 
 // SetupThriftByPaths tells the router which paths the given handler (which should handle the given endpoint) should see
