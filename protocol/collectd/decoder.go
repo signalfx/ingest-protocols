@@ -3,11 +3,9 @@ package collectd
 import (
 	"context"
 	"fmt"
-	"net"
 	"net/http"
 	"strings"
 	"sync/atomic"
-	"time"
 
 	"github.com/gorilla/mux"
 	"github.com/mailru/easyjson"
@@ -16,45 +14,10 @@ import (
 	"github.com/signalfx/golib/v3/errors"
 	"github.com/signalfx/golib/v3/event"
 	"github.com/signalfx/golib/v3/log"
-	"github.com/signalfx/golib/v3/pointer"
 	"github.com/signalfx/golib/v3/sfxclient"
 	"github.com/signalfx/golib/v3/web"
-	"github.com/signalfx/ingest-protocols/protocol"
 	collectdformat "github.com/signalfx/ingest-protocols/protocol/collectd/format"
-	"github.com/signalfx/ingest-protocols/protocol/zipper"
 )
-
-// ListenerServer will listen for collectd datapoint connections
-type ListenerServer struct {
-	protocol.CloseableHealthCheck
-	listener  net.Listener
-	server    http.Server
-	decoder   *JSONDecoder
-	collector sfxclient.Collector
-}
-
-var _ protocol.Listener = &ListenerServer{}
-
-// Close the socket currently open for collectd JSON connections
-func (s *ListenerServer) Close() error {
-	return s.listener.Close()
-}
-
-// DebugDatapoints returns datapoints that are used for debugging the listener
-func (s *ListenerServer) DebugDatapoints() []*datapoint.Datapoint {
-	// returns JSON decoder datapoints
-	return append(s.collector.Datapoints(), s.HealthDatapoints()...)
-}
-
-// DefaultDatapoints returns datapoints that should always be reported from the listener
-func (s *ListenerServer) DefaultDatapoints() []*datapoint.Datapoint {
-	return []*datapoint.Datapoint{}
-}
-
-// Datapoints returns JSON decoder datapoints
-func (s *ListenerServer) Datapoints() []*datapoint.Datapoint {
-	return append(s.DebugDatapoints(), s.DefaultDatapoints()...)
-}
 
 // JSONDecoder can decode collectd's native JSON datapoint format
 type JSONDecoder struct {
@@ -147,76 +110,6 @@ func (decoder *JSONDecoder) Datapoints() []*datapoint.Datapoint {
 		sfxclient.Cumulative("total_blank_dims", nil, atomic.LoadInt64(&decoder.TotalBlankDims)),
 		sfxclient.Cumulative("invalid_collectd_json", nil, atomic.LoadInt64(&decoder.TotalErrors)),
 	}
-}
-
-// ListenerConfig controls optional parameters for collectd listeners
-type ListenerConfig struct {
-	ListenAddr      *string
-	ListenPath      *string
-	Timeout         *time.Duration
-	StartingContext context.Context
-	DebugContext    *web.HeaderCtxFlag
-	HealthCheck     *string
-	HTTPChain       web.NextConstructor
-	Logger          log.Logger
-}
-
-var defaultListenerConfig = &ListenerConfig{
-	ListenAddr:      pointer.String("127.0.0.1:8081"),
-	ListenPath:      pointer.String("/post-collectd"),
-	Timeout:         pointer.Duration(time.Second * 30),
-	HealthCheck:     pointer.String("/healthz"),
-	Logger:          log.Discard,
-	StartingContext: context.Background(),
-}
-
-// NewListener serves http collectd requests
-func NewListener(sink dpsink.Sink, passedConf *ListenerConfig) (*ListenerServer, error) {
-	zippers := zipper.NewZipper()
-	conf := pointer.FillDefaultFrom(passedConf, defaultListenerConfig).(*ListenerConfig)
-
-	listener, err := net.Listen("tcp", *conf.ListenAddr)
-	if err != nil {
-		return nil, err
-	}
-
-	r := mux.NewRouter()
-	metricTracking := &web.RequestCounter{}
-	fullHandler := web.NewHandler(conf.StartingContext, web.FromHTTP(r))
-	if conf.HTTPChain != nil {
-		fullHandler.Add(web.NextHTTP(metricTracking.ServeHTTP))
-		fullHandler.Add(conf.HTTPChain)
-	}
-	decoder := JSONDecoder{
-		SendTo: sink,
-		Logger: conf.Logger,
-	}
-	listenServer := ListenerServer{
-		listener: listener,
-		server: http.Server{
-			Handler:      fullHandler,
-			Addr:         listener.Addr().String(),
-			ReadTimeout:  *conf.Timeout,
-			WriteTimeout: *conf.Timeout,
-		},
-		decoder: &decoder,
-		collector: sfxclient.NewMultiCollector(
-			metricTracking,
-			&decoder,
-			zippers,
-		),
-	}
-	listenServer.SetupHealthCheck(conf.HealthCheck, r, conf.Logger)
-	httpHandler := web.NewHandler(conf.StartingContext, listenServer.decoder)
-	if conf.DebugContext != nil {
-		httpHandler.Add(conf.DebugContext)
-	}
-	SetupCollectdPaths(r, zippers.GzipHandler(httpHandler), *conf.ListenPath)
-
-	go func() {
-		log.IfErr(conf.Logger, listenServer.server.Serve(listener))
-	}()
-	return &listenServer, nil
 }
 
 // SetupCollectdPaths tells the router which paths the given handler (which should handle collectd json)

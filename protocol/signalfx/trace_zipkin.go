@@ -8,16 +8,12 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/gorilla/mux"
 	jaegerpb "github.com/jaegertracing/jaeger/model"
 	"github.com/mailru/easyjson"
-	"github.com/signalfx/golib/v3/datapoint/dpsink"
 	"github.com/signalfx/golib/v3/log"
-	"github.com/signalfx/golib/v3/sfxclient"
 	"github.com/signalfx/golib/v3/sfxclient/spanfilter"
 	"github.com/signalfx/golib/v3/trace"
 	"github.com/signalfx/golib/v3/trace/translator"
-	"github.com/signalfx/golib/v3/web"
 	signalfxformat "github.com/signalfx/ingest-protocols/protocol/signalfx/format"
 )
 
@@ -642,12 +638,4 @@ func (decoder *JSONTraceDecoderV1) Read(ctx context.Context, req *http.Request) 
 	}
 
 	return decoder.Sink.AddSpans(ctx, spans)
-}
-
-func setupJSONTraceV1(ctx context.Context, r *mux.Router, sink Sink, logger log.Logger, httpChain web.NextConstructor, counter *dpsink.Counter) sfxclient.Collector {
-	handler, st := SetupChain(ctx, sink, ZipkinV1, func(s Sink) ErrorReader {
-		return &JSONTraceDecoderV1{Logger: logger, Sink: sink}
-	}, httpChain, logger, counter)
-	SetupJSONByPathsN(r, handler, DefaultTracePathV1, ZipkinTracePathV1, ZipkinTracePathV2)
-	return st
 }

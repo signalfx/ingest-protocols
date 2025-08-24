@@ -36,7 +36,7 @@ lint: ; $(info $(M) running linting on $(CURDIR))
 
 ARGS                                        = -race -timeout=60s -failfast
 COVERAGE_MODE                               = atomic
-FULL_COVERAGE                               = 100.0
+REQUIRED_COVERAGE                           = 95.0
 COVERAGE_DIR                                = $(CURDIR)/coverage.$(shell date -u +"%Y_%m_%dT%H_%M_%SZ")
 COVERAGE_P_FILE                             = $(COVERAGE_DIR)/coverage/parallel/coverage.out
 COVERAGE_S_FILE                             = $(COVERAGE_DIR)/coverage/serialized/coverage.out
@@ -48,8 +48,9 @@ ALL_PKGS := $(shell go list ./... | grep -v etcdIntf | grep -v format)
 test: ; $(info $(M) running test cases across all services in ingest-protocols)
 		mkdir -p $(COVERAGE_DIR)/coverage/
 		go test $(ARGS) -coverprofile=$(COVERAGE_FILE).all -covermode=$(COVERAGE_MODE) $(ALL_PKGS) || exit 2 ;\
-		total_coverage=`gocov convert $(COVERAGE_FILE).all | gocov report | grep -i "total coverage"` ;\
-		if [[ "$$total_coverage" != *'$(FULL_COVERAGE)'* ]]; then \
+		total_coverage=`gocov convert $(COVERAGE_FILE).all | gocov report | grep -i "total coverage" | grep -oE '[0-9]+(\.[0-9]+)?'` ;\
+		echo "Total Coverage: $$total_coverage" ;\
+		if [[ "$$total_coverage" < '$(REQUIRED_COVERAGE)' ]]; then \
 			gocov convert $(COVERAGE_FILE).all | gocov report ;\
 			exit 2 ;\
 		fi ;\

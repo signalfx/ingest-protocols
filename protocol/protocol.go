@@ -1,13 +1,11 @@
 package protocol
 
 import (
-	"context"
 	"io"
 	"net/http"
 
 	"github.com/signalfx/golib/v3/datapoint"
 	"github.com/signalfx/golib/v3/datapoint/dpsink"
-	"github.com/signalfx/golib/v3/event"
 	"github.com/signalfx/golib/v3/sfxclient"
 	"github.com/signalfx/golib/v3/trace"
 )
@@ -61,52 +59,4 @@ type StartupHook interface {
 // Pipeline returns the number of items still in flight that need to be drained
 type Pipeline interface {
 	Pipeline() int64
-}
-
-// UneventfulForwarder converts a datapoint only forwarder into a datapoint/event forwarder
-type UneventfulForwarder struct {
-	DatapointForwarder
-}
-
-// DebugEndpoints does nothing
-func (u *UneventfulForwarder) DebugEndpoints() map[string]http.Handler {
-	return map[string]http.Handler{}
-}
-
-// StartupFinished is to be called after startup is finished
-func (u *UneventfulForwarder) StartupFinished() error {
-	return nil
-}
-
-// AddEvents does nothing and returns nil
-func (u *UneventfulForwarder) AddEvents(ctx context.Context, events []*event.Event) error {
-	return nil
-}
-
-// AddSpans does nothing and returns nil
-func (u *UneventfulForwarder) AddSpans(ctx context.Context, events []*trace.Span) error {
-	return nil
-}
-
-// Pipeline returns zero since UneventfulForwarder doesn't have it's own buffer
-func (u *UneventfulForwarder) Pipeline() int64 {
-	return 0
-}
-
-// ListenerDims are the common stat dimensions we expect on listener protocols
-func ListenerDims(name string, typ string) map[string]string {
-	return map[string]string{
-		"location": "listener",
-		"name":     name,
-		"type":     typ,
-	}
-}
-
-// ForwarderDims are the common stat dimensions we expect on forwarder protocols
-func ForwarderDims(name string, typ string) map[string]string {
-	return map[string]string{
-		"location": "forwarder",
-		"name":     name,
-		"type":     typ,
-	}
 }

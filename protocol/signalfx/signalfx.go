@@ -3,13 +3,19 @@ package signalfx
 import (
 	"errors"
 	"fmt"
+	"net/http"
 	"time"
 
+	"github.com/gorilla/mux"
 	sfxmodel "github.com/signalfx/com_signalfx_metrics_protobuf/model"
 	"github.com/signalfx/golib/v3/datapoint"
 	"github.com/signalfx/golib/v3/event"
+	"github.com/signalfx/golib/v3/web"
 	signalfxformat "github.com/signalfx/ingest-protocols/protocol/signalfx/format"
 )
+
+// TokenHeaderName is the header key for the auth token in the HTTP request
+const TokenHeaderName = "X-SF-TOKEN"
 
 // ValueToSend is an alias
 type ValueToSend signalfxformat.ValueToSend
@@ -166,4 +172,22 @@ func NewProtobufEvent(e *sfxmodel.Event) (*event.Event, error) {
 
 	cat := event.ToProtoEC(e.GetCategory())
 	return event.NewWithProperties(e.GetEventType(), cat, dims, props, fromTS(e.GetTimestamp())), nil
+}
+
+// SetupJSONByPaths tells the router which paths the given handler (which should handle the given
+// endpoint) should see
+func SetupJSONByPaths(r *mux.Router, handler http.Handler, endpoint string) {
+	r.Path(endpoint).Methods("POST").Headers("Content-Type", "application/json").Handler(handler)
+	r.Path(endpoint).Methods("POST").Headers("Content-Type", "application/json; charset=UTF-8").Handler(handler)
+	r.Path(endpoint).Methods("POST").Headers("Content-Type", "application/json; charset=utf-8").Handler(handler)
+	r.Path(endpoint).Methods("POST").Headers("Content-Type", "").HandlerFunc(web.InvalidContentType)
+	r.Path(endpoint).Methods("POST").Handler(handler)
+}
+
+// SetupJSONByPathsN tells the router which paths the given handler (which should handle the given
+// endpoint) should see
+func SetupJSONByPathsN(r *mux.Router, handler http.Handler, endpoints ...string) {
+	for _, endpoint := range endpoints {
+		SetupJSONByPaths(r, handler, endpoint)
+	}
 }
