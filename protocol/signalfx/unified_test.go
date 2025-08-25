@@ -16,7 +16,6 @@ import (
 	"github.com/signalfx/golib/v3/event"
 	"github.com/signalfx/golib/v3/log"
 	"github.com/signalfx/golib/v3/trace"
-	. "github.com/smartystreets/goconvey/convey"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -76,133 +75,157 @@ func TestFromChain(t *testing.T) {
 }
 
 func TestIncludingDimensions(t *testing.T) {
-	Convey("With a basic sink", t, func() {
-		end := dptest.NewBasicSink()
-		end.Resize(1)
-		addInto := IncludingDimensions(map[string]string{"name": "jack"}, end)
-		ctx := context.Background()
-		Convey("no dimensions should be identity function", func() {
-			addInto = IncludingDimensions(nil, end)
-			So(addInto, ShouldEqual, end)
-		})
+	end := dptest.NewBasicSink()
+	end.Resize(1)
+	addInto := IncludingDimensions(map[string]string{"name": "jack"}, end)
+	ctx := context.Background()
+	t.Run("no dimensions should be identity function", func(t *testing.T) {
+		identityAddInto := IncludingDimensions(nil, end)
+		assert.Equal(t, end, identityAddInto)
+	})
 
-		Convey("appending dims should work for datapoints", func() {
-			dp := dptest.DP()
-			So(addInto.AddDatapoints(ctx, []*datapoint.Datapoint{dp}), ShouldBeNil)
-			dpOut := end.Next()
-			So(dpOut.Dimensions["name"], ShouldEqual, "jack")
+	t.Run("appending dims should work for datapoints", func(t *testing.T) {
+		dp := dptest.DP()
+		assert.NoError(t, addInto.AddDatapoints(ctx, []*datapoint.Datapoint{dp}))
+		dpOut := end.Next()
+		assert.Equal(t, "jack", dpOut.Dimensions["name"])
 
-			w := &WithDimensions{}
-			So(len(w.appendDimensions(nil)), ShouldEqual, 0)
-		})
-		Convey("appending dims should work for events", func() {
-			e := dptest.E()
-			So(addInto.AddEvents(ctx, []*event.Event{e}), ShouldBeNil)
-			eOut := end.NextEvent()
-			So(eOut.Dimensions["name"], ShouldEqual, "jack")
+		w := &WithDimensions{}
+		assert.Equal(t, 0, len(w.appendDimensions(nil)))
+	})
+	t.Run("appending dims should work for events", func(t *testing.T) {
+		e := dptest.E()
+		assert.NoError(t, addInto.AddEvents(ctx, []*event.Event{e}))
+		eOut := end.NextEvent()
+		assert.Equal(t, "jack", eOut.Dimensions["name"])
 
-			w := &WithDimensions{}
-			So(len(w.appendDimensionsEvents(nil)), ShouldEqual, 0)
-		})
-		Convey("appending dims should be a pass through for traces", func() {
-			So(addInto.AddSpans(ctx, []*trace.Span{{}}), ShouldBeNil)
-		})
+		w := &WithDimensions{}
+		assert.Equal(t, 0, len(w.appendDimensionsEvents(nil)))
+	})
+	t.Run("appending dims should be a pass through for traces", func(t *testing.T) {
+		assert.NoError(t, addInto.AddSpans(ctx, []*trace.Span{{}}))
 	})
 }
 
 type boolFlagCheck bool
 
-func (b *boolFlagCheck) HasFlag(ctx context.Context) bool {
+func (b *boolFlagCheck) HasFlag(context.Context) bool {
 	return bool(*b)
 }
 
-func TestFilter(t *testing.T) {
-	Convey("With item flagger", t, func() {
-		flagCheck := boolFlagCheck(false)
-		i := &dpsink.ItemFlagger{
-			CtxFlagCheck:        &flagCheck,
-			EventMetaName:       "my_events",
-			MetricDimensionName: "sf_metric",
-			Logger:              log.Discard,
-		}
-		dp1 := datapoint.New("mname", map[string]string{"org": "mine", "type": "prod"}, nil, datapoint.Gauge, time.Time{})
-		dp2 := datapoint.New("mname2", map[string]string{"org": "another", "type": "prod"}, nil, datapoint.Gauge, time.Time{})
-		ev1 := event.New("mname", event.USERDEFINED, map[string]string{"org": "mine", "type": "prod"}, time.Time{})
-		ev2 := event.New("mname2", event.USERDEFINED, map[string]string{"org": "another", "type": "prod"}, time.Time{})
-		chain := FromChain(dpsink.Discard, NextWrap(UnifyNextSinkWrap(i)))
-		ctx := context.Background()
-		So(len(i.Datapoints()), ShouldEqual, 4)
-		Convey("should not flag by default", func() {
-			So(chain.AddDatapoints(ctx, []*datapoint.Datapoint{dp1, dp2}), ShouldBeNil)
-			So(i.HasDatapointFlag(dp1), ShouldBeFalse)
-			So(i.HasDatapointFlag(dp2), ShouldBeFalse)
+func setupFilterTest() (*dpsink.ItemFlagger, Sink, []*datapoint.Datapoint, []*event.Event) {
+	flagCheck := boolFlagCheck(false)
+	i := &dpsink.ItemFlagger{
+		CtxFlagCheck:        &flagCheck,
+		EventMetaName:       "my_events",
+		MetricDimensionName: "sf_metric",
+		Logger:              log.Discard,
+	}
+	dp1 := datapoint.New("mname", map[string]string{"org": "mine", "type": "prod"}, nil, datapoint.Gauge, time.Time{})
+	dp2 := datapoint.New("mname2", map[string]string{"org": "another", "type": "prod"}, nil, datapoint.Gauge, time.Time{})
+	ev1 := event.New("mname", event.USERDEFINED, map[string]string{"org": "mine", "type": "prod"}, time.Time{})
+	ev2 := event.New("mname2", event.USERDEFINED, map[string]string{"org": "another", "type": "prod"}, time.Time{})
+	chain := FromChain(dpsink.Discard, NextWrap(UnifyNextSinkWrap(i)))
+	return i, chain, []*datapoint.Datapoint{dp1, dp2}, []*event.Event{ev1, ev2}
+}
 
-			So(chain.AddEvents(ctx, []*event.Event{ev1, ev2}), ShouldBeNil)
-			So(i.HasEventFlag(ev1), ShouldBeFalse)
-			So(i.HasEventFlag(ev2), ShouldBeFalse)
-			So(i.AddSpans(ctx, []*trace.Span{}, dpsink.Discard), ShouldBeNil)
-		})
-		Convey("should flag if context is flagged", func() {
-			flagCheck = boolFlagCheck(true)
-			So(chain.AddDatapoints(ctx, []*datapoint.Datapoint{dp1, dp2}), ShouldBeNil)
-			So(i.HasDatapointFlag(dp1), ShouldBeTrue)
-			So(i.HasDatapointFlag(dp2), ShouldBeTrue)
+func TestFilterShouldNotFlagByDefault(t *testing.T) {
+	i, chain, dps, events := setupFilterTest()
 
-			So(chain.AddEvents(ctx, []*event.Event{ev1, ev2}), ShouldBeNil)
-			So(i.HasEventFlag(ev1), ShouldBeTrue)
-			So(i.HasEventFlag(ev2), ShouldBeTrue)
-		})
-		Convey("should flag if dimensions are flagged", func() {
-			i.SetDimensions(map[string]string{"org": "mine"})
-			So(i.Var().String(), ShouldContainSubstring, "mine")
-			So(chain.AddDatapoints(ctx, []*datapoint.Datapoint{dp1, dp2}), ShouldBeNil)
-			So(i.HasDatapointFlag(dp1), ShouldBeTrue)
-			So(i.HasDatapointFlag(dp2), ShouldBeFalse)
+	assert.Equal(t, 4, len(i.Datapoints()))
+	assert.NoError(t, chain.AddDatapoints(context.Background(), dps))
+	assert.False(t, i.HasDatapointFlag(dps[0]))
+	assert.False(t, i.HasDatapointFlag(dps[1]))
 
-			So(chain.AddEvents(ctx, []*event.Event{ev1, ev2}), ShouldBeNil)
-			So(i.HasEventFlag(ev1), ShouldBeTrue)
-			So(i.HasEventFlag(ev2), ShouldBeFalse)
-		})
+	assert.NoError(t, chain.AddEvents(context.Background(), events))
+	assert.False(t, i.HasEventFlag(events[0]))
+	assert.False(t, i.HasEventFlag(events[1]))
+	assert.NoError(t, i.AddSpans(context.Background(), []*trace.Span{}, dpsink.Discard))
+}
 
-		Convey("should flag if metric is flagged", func() {
-			i.SetDimensions(map[string]string{"sf_metric": "mname2"})
-			So(chain.AddDatapoints(ctx, []*datapoint.Datapoint{dp1, dp2}), ShouldBeNil)
-			So(i.HasDatapointFlag(dp1), ShouldBeFalse)
-			So(i.HasDatapointFlag(dp2), ShouldBeTrue)
-		})
+func TestFilterShouldFlagIfContextFlagged(t *testing.T) {
+	i, chain, dps, events := setupFilterTest()
+	fc := boolFlagCheck(true)
+	i.CtxFlagCheck = &fc
 
-		Convey("Invalid POST should return an error", func() {
-			req, err := http.NewRequestWithContext(context.Background(), "POST", "", strings.NewReader(`_INVALID_JSON`))
-			So(err, ShouldBeNil)
-			rw := httptest.NewRecorder()
-			i.ServeHTTP(rw, req)
-			So(rw.Code, ShouldEqual, http.StatusBadRequest)
-		})
+	assert.NoError(t, chain.AddDatapoints(context.Background(), dps))
+	assert.True(t, i.HasDatapointFlag(dps[0]))
+	assert.True(t, i.HasDatapointFlag(dps[1]))
 
-		Convey("POST should change dimensions", func() {
-			req, err := http.NewRequestWithContext(context.Background(), "POST", "", strings.NewReader(`{"name":"jack"}`))
-			So(err, ShouldBeNil)
-			rw := httptest.NewRecorder()
-			i.ServeHTTP(rw, req)
-			So(rw.Code, ShouldEqual, http.StatusOK)
-			So(i.GetDimensions(), ShouldResemble, map[string]string{"name": "jack"})
-			Convey("and GET should return them", func() {
-				req, err := http.NewRequestWithContext(context.Background(), "GET", "", nil)
-				So(err, ShouldBeNil)
-				rw := httptest.NewRecorder()
-				i.ServeHTTP(rw, req)
-				So(rw.Code, ShouldEqual, http.StatusOK)
-				So(rw.Body.String(), ShouldEqual, `{"name":"jack"}`+"\n")
-			})
-		})
-		Convey("PATCH should 404", func() {
-			req, err := http.NewRequestWithContext(context.Background(), "PATCH", "", strings.NewReader(`{"name":"jack"}`))
-			So(err, ShouldBeNil)
-			rw := httptest.NewRecorder()
-			i.ServeHTTP(rw, req)
-			So(rw.Code, ShouldEqual, http.StatusNotFound)
-		})
-	})
+	assert.NoError(t, chain.AddEvents(context.Background(), events))
+	assert.True(t, i.HasEventFlag(events[0]))
+	assert.True(t, i.HasEventFlag(events[1]))
+}
+
+func TestFilterShouldFlagIfDimensionsFlagged(t *testing.T) {
+	i, chain, dps, events := setupFilterTest()
+
+	i.SetDimensions(map[string]string{"org": "mine"})
+	assert.Contains(t, i.Var().String(), "mine")
+	assert.NoError(t, chain.AddDatapoints(context.Background(), dps))
+	assert.True(t, i.HasDatapointFlag(dps[0]))
+	assert.False(t, i.HasDatapointFlag(dps[1]))
+
+	assert.NoError(t, chain.AddEvents(context.Background(), events))
+	assert.True(t, i.HasEventFlag(events[0]))
+	assert.False(t, i.HasEventFlag(events[1]))
+}
+
+func TestFilterShouldFlagIfMetricFlagged(t *testing.T) {
+	i, chain, dps, _ := setupFilterTest()
+
+	i.SetDimensions(map[string]string{"sf_metric": "mname2"})
+	assert.NoError(t, chain.AddDatapoints(context.Background(), dps))
+	assert.False(t, i.HasDatapointFlag(dps[0]))
+	assert.True(t, i.HasDatapointFlag(dps[1]))
+}
+
+func TestFilterInvalidPOSTShouldReturnError(t *testing.T) {
+	i, _, _, _ := setupFilterTest()
+
+	req, err := http.NewRequestWithContext(context.Background(), "POST", "", strings.NewReader(`_INVALID_JSON`))
+	assert.NoError(t, err)
+	rw := httptest.NewRecorder()
+	i.ServeHTTP(rw, req)
+	assert.Equal(t, http.StatusBadRequest, rw.Code)
+}
+
+func TestFilterPOSTShouldChangeDimensions(t *testing.T) {
+	i, _, _, _ := setupFilterTest()
+
+	req, err := http.NewRequestWithContext(context.Background(), "POST", "", strings.NewReader(`{"name":"jack"}`))
+	assert.NoError(t, err)
+	rw := httptest.NewRecorder()
+	i.ServeHTTP(rw, req)
+	assert.Equal(t, http.StatusOK, rw.Code)
+	assert.Equal(t, map[string]string{"name": "jack"}, i.GetDimensions())
+}
+
+func TestFilterGETShouldReturnDimensions(t *testing.T) {
+	i, _, _, _ := setupFilterTest()
+
+	req, err := http.NewRequestWithContext(context.Background(), "POST", "", strings.NewReader(`{"name":"jack"}`))
+	assert.NoError(t, err)
+	rw := httptest.NewRecorder()
+	i.ServeHTTP(rw, req)
+	assert.Equal(t, http.StatusOK, rw.Code)
+
+	req, err = http.NewRequestWithContext(context.Background(), "GET", "", nil)
+	assert.NoError(t, err)
+	rw = httptest.NewRecorder()
+	i.ServeHTTP(rw, req)
+	assert.Equal(t, http.StatusOK, rw.Code)
+	assert.Equal(t, `{"name":"jack"}`+"\n", rw.Body.String())
+}
+
+func TestFilterPATCHShould404(t *testing.T) {
+	i, _, _, _ := setupFilterTest()
+
+	req, err := http.NewRequestWithContext(context.Background(), "PATCH", "", strings.NewReader(`{"name":"jack"}`))
+	assert.NoError(t, err)
+	rw := httptest.NewRecorder()
+	i.ServeHTTP(rw, req)
+	assert.Equal(t, http.StatusNotFound, rw.Code)
 }
 
 const numTests = 10

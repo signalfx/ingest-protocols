@@ -8,8 +8,8 @@ import (
 	"github.com/signalfx/golib/v3/event"
 	"github.com/signalfx/golib/v3/pointer"
 	"github.com/signalfx/golib/v3/trace"
-	"github.com/smartystreets/assertions"
-	. "github.com/smartystreets/goconvey/convey"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 type end struct{}
@@ -53,24 +53,22 @@ func Test(t *testing.T) {
 			outputSpan: &trace.Span{Debug: pointer.Bool(true), Tags: map[string]string{"sampling.priority": "1"}},
 		},
 	}
-	Convey("test processDebug", t, func() {
-		for _, tc := range cases {
+	for _, tc := range cases {
+		t.Run(tc.desc, func(t *testing.T) {
 			e := &end{}
 			pd := New(e)
-			So(pd, assertions.ShouldNotBeNil)
+			require.NotNil(t, pd)
 			err := pd.AddSpans(context.Background(), []*trace.Span{tc.inputSpan})
-			So(err, ShouldBeNil)
+			assert.NoError(t, err)
 
-			So(tc.inputSpan.Debug, ShouldResemble, tc.outputSpan.Debug)
-			So(tc.inputSpan.Tags, ShouldResemble, tc.outputSpan.Tags)
-		}
-	})
+			assert.Equal(t, tc.outputSpan.Debug, tc.inputSpan.Debug)
+			assert.Equal(t, tc.outputSpan.Tags, tc.inputSpan.Tags)
+		})
+	}
 }
 
 func TestPassthroughs(t *testing.T) {
-	Convey("test passthroughs", t, func() {
-		at := &ProcessDebug{next: &end{}}
-		So(at.AddDatapoints(context.Background(), []*datapoint.Datapoint{}), ShouldBeNil)
-		So(at.AddEvents(context.Background(), []*event.Event{}), ShouldBeNil)
-	})
+	at := &ProcessDebug{next: &end{}}
+	assert.NoError(t, at.AddDatapoints(context.Background(), []*datapoint.Datapoint{}))
+	assert.NoError(t, at.AddEvents(context.Background(), []*event.Event{}))
 }

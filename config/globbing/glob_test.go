@@ -3,7 +3,7 @@ package globbing
 import (
 	"testing"
 
-	. "github.com/smartystreets/goconvey/convey"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestEscapeMetaCharacters(t *testing.T) {
@@ -44,18 +44,15 @@ func TestEscapeMetaCharacters(t *testing.T) {
 			noMatch: []string{`servicea`, `servicee`},
 		},
 	}
-	Convey("should correctly handle special character ", t, func() {
-		for _, c := range cases {
-			c := c
-			Convey(c.desc, func() {
-				g := GetGlob(c.pattern)
-				for _, m := range c.match {
-					So(g.Match(m), ShouldBeTrue)
-				}
-				for _, n := range c.noMatch {
-					So(g.Match(n), ShouldBeFalse)
-				}
-			})
-		}
-	})
+	for _, c := range cases {
+		t.Run(c.desc, func(t *testing.T) {
+			g := GetGlob(c.pattern)
+			for _, m := range c.match {
+				assert.True(t, g.Match(m), "pattern %q should match %q", c.pattern, m)
+			}
+			for _, n := range c.noMatch {
+				assert.False(t, g.Match(n), "pattern %q should not match %q", c.pattern, n)
+			}
+		})
+	}
 }

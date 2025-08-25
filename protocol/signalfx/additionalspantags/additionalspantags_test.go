@@ -8,24 +8,25 @@ import (
 	"github.com/signalfx/golib/v3/datapoint"
 	"github.com/signalfx/golib/v3/event"
 	"github.com/signalfx/golib/v3/trace"
-	. "github.com/smartystreets/goconvey/convey"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 type end struct{}
 
-func (e *end) AddSpans(ctx context.Context, spans []*trace.Span) error {
+func (e *end) AddSpans(context.Context, []*trace.Span) error {
 	return nil
 }
 
-func (e *end) AddDatapoints(ctx context.Context, points []*datapoint.Datapoint) error {
+func (e *end) AddDatapoints(context.Context, []*datapoint.Datapoint) error {
 	return nil
 }
 
-func (e *end) AddEvents(ctx context.Context, events []*event.Event) error {
+func (e *end) AddEvents(context.Context, []*event.Event) error {
 	return nil
 }
 
-func Test(t *testing.T) {
+func TestAdditionalSpanTags(t *testing.T) {
 	cases := []struct {
 		desc       string
 		tags       map[string]string
@@ -74,25 +75,23 @@ func Test(t *testing.T) {
 			outputSpan: &trace.Span{Tags: map[string]string{"tagKey": "tagValue"}},
 		},
 	}
-	Convey("test additional tags", t, func() {
-		for _, tc := range cases {
+	for _, tc := range cases {
+		t.Run(tc.desc, func(t *testing.T) {
 			e := &end{}
 			at := New(tc.tags, e)
-			So(at, ShouldNotBeNil)
+			require.NotNil(t, at)
 			err := at.AddSpans(context.Background(), []*trace.Span{tc.inputSpan})
-			So(err, ShouldBeNil)
+			require.NoError(t, err)
 
-			So(tc.inputSpan.Tags, ShouldResemble, tc.outputSpan.Tags)
-		}
-	})
+			assert.Equal(t, tc.outputSpan.Tags, tc.inputSpan.Tags)
+		})
+	}
 }
 
 func TestPassthroughs(t *testing.T) {
-	Convey("test passthroughs", t, func() {
-		at := &AdditionalSpanTags{next: &end{}}
-		So(at.AddDatapoints(context.Background(), []*datapoint.Datapoint{}), ShouldBeNil)
-		So(at.AddEvents(context.Background(), []*event.Event{}), ShouldBeNil)
-	})
+	at := &AdditionalSpanTags{next: &end{}}
+	assert.NoError(t, at.AddDatapoints(context.Background(), []*datapoint.Datapoint{}))
+	assert.NoError(t, at.AddEvents(context.Background(), []*event.Event{}))
 }
 
 func Benchmark(b *testing.B) {

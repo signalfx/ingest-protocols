@@ -15,8 +15,6 @@ require (
 	github.com/signalfx/gohelpers v0.0.0-20151202220853-ac9f0e053f15
 	github.com/signalfx/golib/v3 v3.3.55
 	github.com/signalfx/sapm-proto v0.12.0
-	github.com/smartystreets/assertions v1.13.0
-	github.com/smartystreets/goconvey v1.7.2
 	github.com/stretchr/testify v1.10.0
 	go.opentelemetry.io/proto/otlp v0.19.0
 	google.golang.org/grpc v1.58.0
@@ -28,12 +26,12 @@ require (
 	github.com/go-logfmt/logfmt v0.5.1 // indirect
 	github.com/go-stack/stack v1.8.1 // indirect
 	github.com/gogo/googleapis v1.4.1 // indirect
-	github.com/gopherjs/gopherjs v0.0.0-20181017120253-0766667cb4d1 // indirect
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.11.1 // indirect
 	github.com/josharian/intern v1.0.0 // indirect
-	github.com/jtolds/gls v4.20.0+incompatible // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/signalfx/gohistogram v0.0.0-20160107210732-1ccfd2ff5083 // indirect
+	github.com/smartystreets/assertions v1.13.0 // indirect
+	github.com/smartystreets/goconvey v1.7.2 // indirect
 	github.com/stretchr/objx v0.5.2 // indirect
 	github.com/twmb/murmur3 v1.1.7 // indirect
 	github.com/uber/jaeger-client-go v2.30.0+incompatible // indirect

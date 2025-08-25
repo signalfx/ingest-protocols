@@ -9,106 +9,104 @@ import (
 	"github.com/signalfx/golib/v3/event"
 	"github.com/signalfx/golib/v3/pointer"
 	"github.com/signalfx/golib/v3/trace"
-	. "github.com/smartystreets/goconvey/convey"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 type rmend struct{}
 
-func (e *rmend) AddSpans(ctx context.Context, spans []*trace.Span) error {
+func (e *rmend) AddSpans(context.Context, []*trace.Span) error {
 	return nil
 }
 
-func (e *rmend) AddDatapoints(ctx context.Context, points []*datapoint.Datapoint) error {
+func (e *rmend) AddDatapoints(context.Context, []*datapoint.Datapoint) error {
 	return nil
 }
 
-func (e *rmend) AddEvents(ctx context.Context, events []*event.Event) error {
+func (e *rmend) AddEvents(context.Context, []*event.Event) error {
 	return nil
 }
 
 func TestTagDelete(t *testing.T) {
-	Convey("Given a SpanTagRemoval config", t, func() {
-		config := []*TagMatchRuleConfig{
-			{
-				Service: pointer.String("test-service"),
-				Tags:    []string{"delete-me"},
-			},
-			{
-				Service:   pointer.String("some*service"),
-				Operation: pointer.String("sensitive*"),
-				Tags:      []string{"PII", "SSN"},
-			},
-		}
-		so, _ := NewRm(config, &rmend{})
-		Convey("should remove tag from exact-match service", func() {
-			spans := []*trace.Span{makeSpan("test-service", "shouldn't matter", map[string]string{"delete-me": "val"})}
-			so.AddSpans(context.Background(), spans)
-			So(spans[0].Tags, ShouldResemble, map[string]string{})
-		})
-		Convey("should not remove tag from exact-match service as prefix", func() {
-			spans := []*trace.Span{makeSpan("false-test-service", "shouldn't matter", map[string]string{"delete-me": "val"})}
-			so.AddSpans(context.Background(), spans)
-			So(spans[0].Tags, ShouldResemble, map[string]string{"delete-me": "val"})
-		})
-		Convey("should not remove tag from exact-match service as suffix", func() {
-			spans := []*trace.Span{makeSpan("test-service-extra", "shouldn't matter", map[string]string{"delete-me": "val"})}
-			so.AddSpans(context.Background(), spans)
-			So(spans[0].Tags, ShouldResemble, map[string]string{"delete-me": "val"})
-		})
-		Convey("should remove tag from matching wildcard service and operation", func() {
-			spans := []*trace.Span{makeSpan("some-test-service", "sensitive-data-leak", map[string]string{"PII": "val"})}
-			so.AddSpans(context.Background(), spans)
-			So(spans[0].Tags, ShouldResemble, map[string]string{})
-		})
-		Convey("should not remove tag with mismatched tag name", func() {
-			spans := []*trace.Span{makeSpan("some-test-service", "sensitive-data-leak", map[string]string{"delete-me": "val"})}
-			so.AddSpans(context.Background(), spans)
-			So(spans[0].Tags, ShouldResemble, map[string]string{"delete-me": "val"})
-		})
-		Convey("should not remove tag with matching service but unmatched operation", func() {
-			spans := []*trace.Span{makeSpan("some-test-service", "secure-op", map[string]string{"PII": "val"})}
-			so.AddSpans(context.Background(), spans)
-			So(spans[0].Tags, ShouldResemble, map[string]string{"PII": "val"})
-		})
-		Convey("should remove all tags defined in the removal rule", func() {
-			spans := []*trace.Span{makeSpan("some-test-service", "sensitive-data-leak", map[string]string{"PII": "val", "SSN": "111-22-3333"})}
-			so.AddSpans(context.Background(), spans)
-			So(spans[0].Tags, ShouldResemble, map[string]string{})
-		})
-		Convey("should handle an empty span", func() {
-			spans := []*trace.Span{{}}
-			err := so.AddSpans(context.Background(), spans)
-			So(err, ShouldBeNil)
-		})
-		Convey("should handle a span with an empty service", func() {
-			spans := []*trace.Span{{LocalEndpoint: &trace.Endpoint{}}}
-			err := so.AddSpans(context.Background(), spans)
-			So(err, ShouldBeNil)
-		})
+	config := []*TagMatchRuleConfig{
+		{
+			Service: pointer.String("test-service"),
+			Tags:    []string{"delete-me"},
+		},
+		{
+			Service:   pointer.String("some*service"),
+			Operation: pointer.String("sensitive*"),
+			Tags:      []string{"PII", "SSN"},
+		},
+	}
+	so, err := NewRm(config, &rmend{})
+	require.NoError(t, err)
+	t.Run("should remove tag from exact-match service", func(t *testing.T) {
+		spans := []*trace.Span{makeSpan("test-service", "shouldn't matter", map[string]string{"delete-me": "val"})}
+		so.AddSpans(context.Background(), spans)
+		assert.Equal(t, map[string]string{}, spans[0].Tags)
+	})
+	t.Run("should not remove tag from exact-match service as prefix", func(t *testing.T) {
+		spans := []*trace.Span{makeSpan("false-test-service", "shouldn't matter", map[string]string{"delete-me": "val"})}
+		so.AddSpans(context.Background(), spans)
+		assert.Equal(t, map[string]string{"delete-me": "val"}, spans[0].Tags)
+	})
+	t.Run("should not remove tag from exact-match service as suffix", func(t *testing.T) {
+		spans := []*trace.Span{makeSpan("test-service-extra", "shouldn't matter", map[string]string{"delete-me": "val"})}
+		so.AddSpans(context.Background(), spans)
+		assert.Equal(t, map[string]string{"delete-me": "val"}, spans[0].Tags)
+	})
+	t.Run("should remove tag from matching wildcard service and operation", func(t *testing.T) {
+		spans := []*trace.Span{makeSpan("some-test-service", "sensitive-data-leak", map[string]string{"PII": "val"})}
+		so.AddSpans(context.Background(), spans)
+		assert.Equal(t, map[string]string{}, spans[0].Tags)
+	})
+	t.Run("should not remove tag with mismatched tag name", func(t *testing.T) {
+		spans := []*trace.Span{makeSpan("some-test-service", "sensitive-data-leak", map[string]string{"delete-me": "val"})}
+		so.AddSpans(context.Background(), spans)
+		assert.Equal(t, map[string]string{"delete-me": "val"}, spans[0].Tags)
+	})
+	t.Run("should not remove tag with matching service but unmatched operation", func(t *testing.T) {
+		spans := []*trace.Span{makeSpan("some-test-service", "secure-op", map[string]string{"PII": "val"})}
+		so.AddSpans(context.Background(), spans)
+		assert.Equal(t, map[string]string{"PII": "val"}, spans[0].Tags)
+	})
+	t.Run("should remove all tags defined in the removal rule", func(t *testing.T) {
+		spans := []*trace.Span{makeSpan("some-test-service", "sensitive-data-leak", map[string]string{"PII": "val", "SSN": "111-22-3333"})}
+		so.AddSpans(context.Background(), spans)
+		assert.Equal(t, map[string]string{}, spans[0].Tags)
+	})
+	t.Run("should handle an empty span", func(t *testing.T) {
+		spans := []*trace.Span{{}}
+		err := so.AddSpans(context.Background(), spans)
+		assert.NoError(t, err)
+	})
+	t.Run("should handle a span with an empty service", func(t *testing.T) {
+		spans := []*trace.Span{{LocalEndpoint: &trace.Endpoint{}}}
+		err := so.AddSpans(context.Background(), spans)
+		assert.NoError(t, err)
 	})
 }
 
-func TestNewRmBad(t *testing.T) {
-	Convey("test missing tags", t, func() {
-		_, err := NewRm([]*TagMatchRuleConfig{{}}, &rmend{})
-		So(err, ShouldNotBeNil)
-	})
-	Convey("test empty tag name", t, func() {
-		_, err := NewRm([]*TagMatchRuleConfig{{Tags: []string{""}}}, &rmend{})
-		So(err, ShouldNotBeNil)
-	})
-	Convey("test empty tags array", t, func() {
-		_, err := NewRm([]*TagMatchRuleConfig{{Tags: []string{}}}, &rmend{})
-		So(err, ShouldNotBeNil)
-	})
+func TestNewRmMissingTags(t *testing.T) {
+	_, err := NewRm([]*TagMatchRuleConfig{{}}, &rmend{})
+	assert.Error(t, err)
+}
+
+func TestNewRmEmptyTagName(t *testing.T) {
+	_, err := NewRm([]*TagMatchRuleConfig{{Tags: []string{""}}}, &rmend{})
+	assert.Error(t, err)
+}
+
+func TestNewRmEmptyTagsArray(t *testing.T) {
+	_, err := NewRm([]*TagMatchRuleConfig{{Tags: []string{}}}, &rmend{})
+	assert.Error(t, err)
 }
 
 func TestRmPassthrough(t *testing.T) {
-	Convey("test passthroughs", t, func() {
-		so := &SpanTagRemoval{next: &rmend{}}
-		So(so.AddDatapoints(context.Background(), []*datapoint.Datapoint{}), ShouldBeNil)
-		So(so.AddEvents(context.Background(), []*event.Event{}), ShouldBeNil)
-	})
+	so := &SpanTagRemoval{next: &rmend{}}
+	assert.NoError(t, so.AddDatapoints(context.Background(), []*datapoint.Datapoint{}))
+	assert.NoError(t, so.AddEvents(context.Background(), []*event.Event{}))
 }
 
 func BenchmarkRmOne(b *testing.B) {

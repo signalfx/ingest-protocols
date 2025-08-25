@@ -11,7 +11,7 @@ import (
 
 	"github.com/signalfx/golib/v3/datapoint/dptest"
 	"github.com/signalfx/golib/v3/log"
-	. "github.com/smartystreets/goconvey/convey"
+	"github.com/stretchr/testify/assert"
 	metricsservicev1 "go.opentelemetry.io/proto/otlp/collector/metrics/v1"
 	commonv1 "go.opentelemetry.io/proto/otlp/common/v1"
 	metricsv1 "go.opentelemetry.io/proto/otlp/metrics/v1"
@@ -27,46 +27,44 @@ func (errorReader *errorReader) Read([]byte) (int, error) {
 }
 
 func TestDecoder(t *testing.T) {
-	Convey("httpMetricDecoder", t, func() {
-		sendTo := dptest.NewBasicSink()
-		decoder := NewHTTPMetricDecoder(sendTo, log.Discard)
+	sendTo := dptest.NewBasicSink()
+	decoder := NewHTTPMetricDecoder(sendTo, log.Discard)
 
-		Convey("Bad request reading", func() {
-			req := &http.Request{
-				Body: io.NopCloser(&errorReader{}),
-			}
-			req.ContentLength = 1
-			ctx := context.Background()
-			So(decoder.Read(ctx, req), ShouldEqual, errRead)
-		})
+	t.Run("bad request reading", func(t *testing.T) {
+		req := &http.Request{
+			Body: io.NopCloser(&errorReader{}),
+		}
+		req.ContentLength = 1
+		ctx := context.Background()
+		assert.Equal(t, errRead, decoder.Read(ctx, req))
+	})
 
-		Convey("Bad request content", func() {
-			req := &http.Request{
-				Body: io.NopCloser(bytes.NewBufferString("asdf")),
-			}
-			req.ContentLength = 4
-			ctx := context.Background()
-			So(decoder.Read(ctx, req), ShouldNotBeNil)
-		})
+	t.Run("bad request content", func(t *testing.T) {
+		req := &http.Request{
+			Body: io.NopCloser(bytes.NewBufferString("asdf")),
+		}
+		req.ContentLength = 4
+		ctx := context.Background()
+		assert.NotNil(t, decoder.Read(ctx, req))
+	})
 
-		Convey("Good request", func(c C) {
-			var msg metricsservicev1.ExportMetricsServiceRequest
-			msg.ResourceMetrics = []*metricsv1.ResourceMetrics{
-				{
-					ScopeMetrics: []*metricsv1.ScopeMetrics{
-						{
-							Metrics: []*metricsv1.Metric{
-								{
-									Name: "test",
-									Data: &metricsv1.Metric_Gauge{
-										Gauge: &metricsv1.Gauge{
-											DataPoints: []*metricsv1.NumberDataPoint{
-												{
-													Attributes:        []*commonv1.KeyValue{},
-													StartTimeUnixNano: 1000,
-													TimeUnixNano:      1000,
-													Value:             &metricsv1.NumberDataPoint_AsInt{AsInt: 4},
-												},
+	t.Run("good request", func(t *testing.T) {
+		var msg metricsservicev1.ExportMetricsServiceRequest
+		msg.ResourceMetrics = []*metricsv1.ResourceMetrics{
+			{
+				ScopeMetrics: []*metricsv1.ScopeMetrics{
+					{
+						Metrics: []*metricsv1.Metric{
+							{
+								Name: "test",
+								Data: &metricsv1.Metric_Gauge{
+									Gauge: &metricsv1.Gauge{
+										DataPoints: []*metricsv1.NumberDataPoint{
+											{
+												Attributes:        []*commonv1.KeyValue{},
+												StartTimeUnixNano: 1000,
+												TimeUnixNano:      1000,
+												Value:             &metricsv1.NumberDataPoint_AsInt{AsInt: 4},
 											},
 										},
 									},
@@ -75,25 +73,25 @@ func TestDecoder(t *testing.T) {
 						},
 					},
 				},
-			}
-			b, _ := proto.Marshal(&msg)
-			req := &http.Request{
-				Body: io.NopCloser(bytes.NewBuffer(b)),
-			}
-			req.ContentLength = int64(len(b))
-			ctx := context.Background()
+			},
+		}
+		b, _ := proto.Marshal(&msg)
+		req := &http.Request{
+			Body: io.NopCloser(bytes.NewBuffer(b)),
+		}
+		req.ContentLength = int64(len(b))
+		ctx := context.Background()
 
-			var wg sync.WaitGroup
-			wg.Add(1)
-			go func() {
-				dp := <-sendTo.PointsChan
-				c.So(dp, ShouldNotBeNil)
-				wg.Done()
-			}()
+		var wg sync.WaitGroup
+		wg.Add(1)
+		go func() {
+			dp := <-sendTo.PointsChan
+			assert.NotNil(t, dp)
+			wg.Done()
+		}()
 
-			So(decoder.Read(ctx, req), ShouldBeNil)
+		assert.NoError(t, decoder.Read(ctx, req))
 
-			wg.Wait()
-		})
+		wg.Wait()
 	})
 }
