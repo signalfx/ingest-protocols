@@ -17,7 +17,7 @@ require (
 	github.com/signalfx/sapm-proto v0.12.0
 	github.com/stretchr/testify v1.10.0
 	go.opentelemetry.io/proto/otlp v0.19.0
-	google.golang.org/grpc v1.58.0
+	google.golang.org/grpc v1.58.3
 	google.golang.org/protobuf v1.33.0
 )
 
