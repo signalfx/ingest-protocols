@@ -441,7 +441,7 @@ func TestJSONDecoderV2_Datapoints(t *testing.T) {
 
 func TestSetupProtobufV2DatapointPaths(t *testing.T) {
 	r := mux.NewRouter()
-	handler := http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+	handler := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte("handled"))
 	})
@@ -460,7 +460,7 @@ func TestSetupProtobufV2DatapointPaths(t *testing.T) {
 
 func TestSetupProtobufV2ByPaths(t *testing.T) {
 	r := mux.NewRouter()
-	handler := http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+	handler := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte("custom"))
 	})
@@ -479,7 +479,7 @@ func TestSetupProtobufV2ByPaths(t *testing.T) {
 
 func TestSetupJSONV2DatapointPaths(t *testing.T) {
 	r := mux.NewRouter()
-	handler := http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+	handler := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte("json_v2"))
 	})
@@ -498,7 +498,7 @@ func TestSetupJSONV2DatapointPaths(t *testing.T) {
 
 func TestSetupProtobufV1Paths(t *testing.T) {
 	r := mux.NewRouter()
-	handler := http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+	handler := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte("v1_protobuf"))
 	})
@@ -522,7 +522,7 @@ func TestSetupProtobufV1Paths(t *testing.T) {
 
 func TestSetupJSONV1Paths(t *testing.T) {
 	r := mux.NewRouter()
-	handler := http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+	handler := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte("v1_json"))
 	})

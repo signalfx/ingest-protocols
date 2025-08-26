@@ -28,7 +28,7 @@ func (c *CloseableHealthCheck) HealthDatapoints() []*datapoint.Datapoint {
 
 // SetupHealthCheck sets up a closeable healthcheck, when open returns 200, when closed returns 404 and close the connection
 func (c *CloseableHealthCheck) SetupHealthCheck(healthCheck *string, r *mux.Router, logger log.Logger) {
-	f := http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
+	f := http.HandlerFunc(func(rw http.ResponseWriter, _ *http.Request) {
 		atomic.AddInt64(&c.totalHealthChecks, 1)
 		if atomic.LoadInt32(&c.setCloseHeader) != 0 {
 			rw.Header().Set("Connection", "Close")
