@@ -1,6 +1,6 @@
 module github.com/signalfx/ingest-protocols
 
-go 1.18
+go 1.23
 
 require (
 	github.com/apache/thrift v0.16.0
