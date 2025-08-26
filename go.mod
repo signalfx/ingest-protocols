@@ -6,7 +6,7 @@ require (
 	github.com/apache/thrift v0.16.0
 	github.com/gobwas/glob v0.2.3
 	github.com/gogo/protobuf v1.3.2
-	github.com/golang/protobuf v1.5.3
+	github.com/golang/protobuf v1.5.4
 	github.com/gorilla/mux v1.8.1
 	github.com/jaegertracing/jaeger v1.38.0
 	github.com/mailru/easyjson v0.7.7
