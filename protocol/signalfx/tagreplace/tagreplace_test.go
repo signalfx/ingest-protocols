@@ -14,15 +14,15 @@ import (
 
 type end struct{}
 
-func (e *end) AddSpans(ctx context.Context, spans []*trace.Span) error {
+func (e *end) AddSpans(context.Context, []*trace.Span) error {
 	return nil
 }
 
-func (e *end) AddDatapoints(ctx context.Context, points []*datapoint.Datapoint) error {
+func (e *end) AddDatapoints(context.Context, []*datapoint.Datapoint) error {
 	return nil
 }
 
-func (e *end) AddEvents(ctx context.Context, events []*event.Event) error {
+func (e *end) AddEvents(context.Context, []*event.Event) error {
 	return nil
 }
 

@@ -17,7 +17,7 @@ type SignalFxTokenAuth struct {
 var _ credentials.PerRPCCredentials = new(SignalFxTokenAuth)
 
 // GetRequestMetadata returns the metadata with the auth token
-func (a *SignalFxTokenAuth) GetRequestMetadata(ctx context.Context, uri ...string) (map[string]string, error) {
+func (a *SignalFxTokenAuth) GetRequestMetadata(context.Context, ...string) (map[string]string, error) {
 	return map[string]string{
 		sfxclient.TokenHeaderName: a.Token,
 	}, nil

@@ -15,15 +15,15 @@ import (
 
 type obfend struct{}
 
-func (e *obfend) AddSpans(ctx context.Context, spans []*trace.Span) error {
+func (e *obfend) AddSpans(context.Context, []*trace.Span) error {
 	return nil
 }
 
-func (e *obfend) AddDatapoints(ctx context.Context, points []*datapoint.Datapoint) error {
+func (e *obfend) AddDatapoints(context.Context, []*datapoint.Datapoint) error {
 	return nil
 }
 
-func (e *obfend) AddEvents(ctx context.Context, events []*event.Event) error {
+func (e *obfend) AddEvents(context.Context, []*event.Event) error {
 	return nil
 }
 

@@ -129,14 +129,13 @@ func (decoder *JSONDecoderV1) Read(ctx context.Context, req *http.Request) error
 			break
 		} else if err != nil {
 			return err
-		} else {
-			if d.Metric == "" {
-				continue
-			}
-			mt := fromMT(decoder.TypeGetter.GetMetricTypeFromMap(d.Metric))
-			dp := datapoint.New(d.Metric, map[string]string{"sf_source": d.Source}, datapoint.NewFloatValue(d.Value), mt, time.Now())
-			log.IfErr(decoder.Logger, decoder.Sink.AddDatapoints(ctx, []*datapoint.Datapoint{dp}))
 		}
+		if d.Metric == "" {
+			continue
+		}
+		mt := fromMT(decoder.TypeGetter.GetMetricTypeFromMap(d.Metric))
+		dp := datapoint.New(d.Metric, map[string]string{"sf_source": d.Source}, datapoint.NewFloatValue(d.Value), mt, time.Now())
+		log.IfErr(decoder.Logger, decoder.Sink.AddDatapoints(ctx, []*datapoint.Datapoint{dp}))
 	}
 	return nil
 }

@@ -327,7 +327,7 @@ func TestSetupCollectdPaths(t *testing.T) {
 	endpoint := "/v1/collectd"
 
 	// Create a test handler
-	testHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	testHandler := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte("handled"))
 	})
