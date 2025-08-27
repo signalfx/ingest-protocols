@@ -15,7 +15,7 @@ require (
 	github.com/signalfx/gohelpers v0.0.0-20151202220853-ac9f0e053f15
 	github.com/signalfx/golib/v3 v3.3.55
 	github.com/signalfx/sapm-proto v0.12.0
-	github.com/stretchr/testify v1.10.0
+	github.com/stretchr/testify v1.11.0
 	go.opentelemetry.io/proto/otlp v0.19.0
 	google.golang.org/grpc v1.58.3
 	google.golang.org/protobuf v1.33.0
