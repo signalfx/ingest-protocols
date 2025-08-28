@@ -8,7 +8,7 @@ import (
 	"strconv"
 	"strings"
 
-	jaegerpb "github.com/jaegertracing/jaeger/model"
+	jaegerpb "github.com/jaegertracing/jaeger-idl/model/v1"
 	"github.com/mailru/easyjson"
 	"github.com/signalfx/golib/v3/log"
 	"github.com/signalfx/golib/v3/sfxclient/spanfilter"

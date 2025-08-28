@@ -13,9 +13,8 @@ import (
 
 	"github.com/apache/thrift/lib/go/thrift"
 	"github.com/gorilla/mux"
-	"github.com/jaegertracing/jaeger/model"
-	jThriftConverter "github.com/jaegertracing/jaeger/model/converter/thrift/jaeger"
-	jThrift "github.com/jaegertracing/jaeger/thrift-gen/jaeger"
+	jaegerpb "github.com/jaegertracing/jaeger-idl/model/v1"
+	jThrift "github.com/jaegertracing/jaeger-idl/thrift-gen/jaeger"
 	"github.com/opentracing/opentracing-go/ext"
 	"github.com/signalfx/golib/v3/log"
 	"github.com/signalfx/golib/v3/pointer"
@@ -79,10 +78,10 @@ func (j *JaegerThriftToSAPMDecoder) Read(ctx context.Context, req *http.Request)
 	}
 
 	return &splunksapm.PostSpansRequest{
-		Batches: []*model.Batch{
+		Batches: []*jaegerpb.Batch{
 			{
-				Spans:   jThriftConverter.ToDomain(batch.GetSpans(), batch.GetProcess()),
-				Process: jThriftConverter.ToDomainProcess(batch.GetProcess()),
+				Spans:   toDomain{}.ToDomain(batch.GetSpans(), batch.GetProcess()),
+				Process: toDomain{}.getProcess(batch.GetProcess()),
 			},
 		},
 	}, nil
