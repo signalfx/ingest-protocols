@@ -12,8 +12,8 @@ import (
 
 	"github.com/apache/thrift/lib/go/thrift"
 	"github.com/gogo/protobuf/jsonpb"
-	"github.com/jaegertracing/jaeger/model"
-	jThrift "github.com/jaegertracing/jaeger/thrift-gen/jaeger"
+	jaegerpb "github.com/jaegertracing/jaeger-idl/model/v1"
+	jThrift "github.com/jaegertracing/jaeger-idl/thrift-gen/jaeger"
 	"github.com/signalfx/golib/v3/pointer"
 	"github.com/signalfx/golib/v3/trace"
 	splunksapm "github.com/signalfx/sapm-proto/gen"
@@ -486,7 +486,7 @@ func TestJaegerThriftToSAPMDecoder(t *testing.T) {
 
 	reqBody := ioutil.NopCloser(bytes.NewBuffer(batchBytes))
 
-	desired := &splunksapm.PostSpansRequest{Batches: []*model.Batch{{}}}
+	desired := &splunksapm.PostSpansRequest{Batches: []*jaegerpb.Batch{{}}}
 	err = jsonpb.Unmarshal(strings.NewReader(jagerProtoJSON), desired.Batches[0])
 	if err != nil {
 		panic("couldn't serialize protobuf acceptance criteria")

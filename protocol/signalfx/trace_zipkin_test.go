@@ -13,7 +13,7 @@ import (
 	"testing"
 	"time"
 
-	jaegerpb "github.com/jaegertracing/jaeger/model"
+	jaegerpb "github.com/jaegertracing/jaeger-idl/model/v1"
 	"github.com/mailru/easyjson"
 	"github.com/signalfx/golib/v3/pointer"
 	"github.com/signalfx/golib/v3/sfxclient/spanfilter"
