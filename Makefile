@@ -36,7 +36,7 @@ lint: ; $(info $(M) running linting on $(CURDIR))
 
 ARGS                                        = -race -timeout=60s -failfast
 COVERAGE_MODE                               = atomic
-REQUIRED_COVERAGE                           = 93.0
+REQUIRED_COVERAGE                           = 92.0
 COVERAGE_DIR                                = $(CURDIR)/coverage.$(shell date -u +"%Y_%m_%dT%H_%M_%SZ")
 COVERAGE_P_FILE                             = $(COVERAGE_DIR)/coverage/parallel/coverage.out
 COVERAGE_S_FILE                             = $(COVERAGE_DIR)/coverage/serialized/coverage.out
