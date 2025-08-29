@@ -24,9 +24,11 @@ import (
 	"github.com/signalfx/golib/v3/errors"
 	"github.com/signalfx/golib/v3/log"
 	"github.com/signalfx/golib/v3/sfxclient"
+	"github.com/signalfx/golib/v3/web"
 	"github.com/signalfx/ingest-protocols/logkey"
 	"github.com/signalfx/ingest-protocols/protocol"
 	signalfxformat "github.com/signalfx/ingest-protocols/protocol/signalfx/format"
+	"github.com/signalfx/ingest-protocols/protocol/zipper"
 )
 
 // MericTypeGetter is an old metric interface that returns the type of a metric name
@@ -261,4 +263,71 @@ func SetupProtobufV1Paths(r *mux.Router, handler http.Handler) {
 func SetupJSONV1Paths(r *mux.Router, handler http.Handler) {
 	SetupJSONByPaths(r, handler, "/datapoint")
 	SetupJSONByPaths(r, handler, "/v1/datapoint")
+}
+
+// ErrorTrackerHandler behaves like a http handler, but tracks error returns from a ErrorReader
+type ErrorTrackerHandler struct {
+	TotalErrors int64
+	reader      ErrorReader
+	Logger      log.Logger
+}
+
+// Datapoints gets TotalErrors stats
+func (e *ErrorTrackerHandler) Datapoints() []*datapoint.Datapoint {
+	return []*datapoint.Datapoint{
+		sfxclient.Cumulative("total_errors", nil, atomic.LoadInt64(&e.TotalErrors)),
+	}
+}
+
+func addTokenToContext(ctx context.Context, req *http.Request) context.Context {
+	head := req.Header.Get(sfxclient.TokenHeaderName)
+	if head != "" {
+		ctx = context.WithValue(ctx, sfxclient.TokenHeaderName, head)
+	}
+	return ctx
+}
+
+// ServeHTTPC will serve the wrapped ErrorReader and return the error (if any) to rw if ErrorReader
+// fails
+func (e *ErrorTrackerHandler) ServeHTTPC(ctx context.Context, rw http.ResponseWriter, req *http.Request) {
+	ctx = addTokenToContext(ctx, req)
+	if err := e.reader.Read(ctx, req); err != nil {
+		atomic.AddInt64(&e.TotalErrors, 1)
+		rw.WriteHeader(http.StatusBadRequest)
+		_, err = rw.Write([]byte(err.Error()))
+		log.IfErr(e.Logger, err)
+		return
+	}
+	_, err := rw.Write([]byte(`"OK"`))
+	log.IfErr(e.Logger, err)
+}
+
+// SetupChain wraps the reader returned by getReader in an http.Handler along
+// with some middleware that calculates internal metrics about requests.
+func SetupChain(ctx context.Context, sink Sink, chainType string, getReader func(Sink) ErrorReader, httpChain web.NextConstructor, logger log.Logger, counter *dpsink.Counter, moreConstructors ...web.Constructor) (http.Handler, sfxclient.Collector) {
+	zippers := zipper.NewZipper()
+
+	ucount := UnifyNextSinkWrap(counter)
+	finalSink := FromChain(sink, NextWrap(ucount))
+	errReader := getReader(finalSink)
+	errorTracker := ErrorTrackerHandler{
+		reader: errReader,
+		Logger: logger,
+	}
+	metricTracking := web.RequestCounter{}
+	handler := web.NewHandler(ctx, &errorTracker).Add(web.NextHTTP(metricTracking.ServeHTTP)).Add(httpChain)
+	for _, c := range moreConstructors {
+		handler.Add(c)
+	}
+	st := &sfxclient.WithDimensions{
+		Collector: sfxclient.NewMultiCollector(
+			&metricTracking,
+			&errorTracker,
+			zippers,
+		),
+		Dimensions: map[string]string{
+			"protocol": "sfx_" + chainType,
+		},
+	}
+	return zippers.GzipHandler(handler), st
 }
