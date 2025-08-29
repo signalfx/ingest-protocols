@@ -75,7 +75,7 @@ func newZipper(zipperFunc func(r io.Reader) (*gzip.Reader, error)) *ReadZipper {
 	z := &ReadZipper{}
 	z.zippers = sync.Pool{New: func() interface{} {
 		atomic.AddInt64(&z.NewCount, 1)
-		// This is just the header of an empty gzip, unlike NewWriter, i can't pass in nil ot empty bytes
+		// This is just the header of an empty gzip, unlike NewWriter, it can't pass in nil to empty bytes
 		g, err := zipperFunc(bytes.NewBuffer([]byte{31, 139, 8, 0, 0, 0, 0, 0, 0, 255}))
 		if err == nil {
 			return g
