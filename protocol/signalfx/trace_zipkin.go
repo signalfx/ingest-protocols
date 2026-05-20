@@ -566,7 +566,13 @@ func ParseJaegerSpansFromRequest(req *http.Request) ([]*jaegerpb.Span, error) {
 	if err := easyjson.UnmarshalFromReader(req.Body, &input); err != nil {
 		return nil, ErrInvalidJSONTraceFormat
 	}
+	return ParseJaegerSpansFromInputList(input)
+}
 
+// ParseJaegerSpansFromInputList converts a pre-parsed InputSpanList into jaeger spans.
+// Use this when the caller has already unmarshaled the request body (e.g. to extract trace ID
+// length hints before leading zeros are lost), so the JSON is only decoded once.
+func ParseJaegerSpansFromInputList(input signalfxformat.InputSpanList) ([]*jaegerpb.Span, error) {
 	spans := make([]*jaegerpb.Span, 0, len(input))
 	sm := &spanfilter.Map{}
 

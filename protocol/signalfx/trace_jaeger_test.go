@@ -252,6 +252,46 @@ const jaegerBatchJSON = `
 }
 `
 
+func TestReadWithRawBatch(t *testing.T) {
+	// Build a thrift batch with two spans: one with zero TraceIdHigh (Long hint) and one with
+	// non-zero TraceIdHigh (Short hint), so we can verify the raw batch is returned intact.
+	highZero := int64(0)
+	highNonZero := int64(1)
+	low := int64(5951113872249657919)
+	rawBatch := &jThrift.Batch{
+		Process: &jThrift.Process{ServiceName: "svc"},
+		Spans: []*jThrift.Span{
+			{TraceIdLow: low, TraceIdHigh: highZero, SpanId: 1, OperationName: "op-long"},
+			{TraceIdLow: low, TraceIdHigh: highNonZero, SpanId: 2, OperationName: "op-short"},
+		},
+	}
+	batchBytes, err := thrift.NewTSerializer().Write(context.Background(), rawBatch)
+	assert.NoError(t, err)
+
+	decoder := NewJaegerThriftToSAPMDecoder()
+
+	t.Run("returns SAPM and raw batch in a single decode pass", func(t *testing.T) {
+		req := &http.Request{Body: ioutil.NopCloser(bytes.NewReader(batchBytes))}
+		sapm, raw, decodeErr := decoder.ReadWithRawBatch(context.Background(), req)
+
+		assert.NoError(t, decodeErr)
+		assert.NotNil(t, sapm)
+		assert.Len(t, sapm.GetBatches(), 1)
+		assert.Len(t, sapm.GetBatches()[0].GetSpans(), 2)
+
+		assert.NotNil(t, raw)
+		assert.Len(t, raw.GetSpans(), 2)
+		assert.Equal(t, highZero, raw.GetSpans()[0].TraceIdHigh)
+		assert.Equal(t, highNonZero, raw.GetSpans()[1].TraceIdHigh)
+	})
+
+	t.Run("returns error on bad body", func(t *testing.T) {
+		req := &http.Request{Body: ioutil.NopCloser(&errorReader{})}
+		_, _, decodeErr := decoder.ReadWithRawBatch(context.Background(), req)
+		assert.EqualError(t, decodeErr, "could not read request body")
+	})
+}
+
 func TestJaegerThriftToSAPMDecoder(t *testing.T) {
 	// test data copied from https://github.com/jaegertracing/jaeger/blob/master/model/converter/thrift/jaeger/fixtures/thrift_batch_01.json
 	jaegerThriftJSON := `

@@ -2402,3 +2402,42 @@ func Test(t *testing.T) {
 	bb, _ := easyjson.Marshal((*signalfxformat.InputSpan)(sourceSpans[0]))
 	require.NotNil(t, bb)
 }
+
+func TestParseJaegerSpansFromInputList(t *testing.T) {
+	t.Run("produces same result as ParseJaegerSpansFromRequest", func(t *testing.T) {
+		body := `[
+			{
+				"traceId": "0123456789abcdef",
+				"id": "abc1234567890def",
+				"name": "op",
+				"kind": "CLIENT",
+				"timestamp": 1000,
+				"duration": 100,
+				"localEndpoint": {"serviceName": "svc"}
+			}
+		]`
+
+		// via ParseJaegerSpansFromRequest
+		reqA := &http.Request{Body: ioutil.NopCloser(strings.NewReader(body))}
+		spansA, errA := ParseJaegerSpansFromRequest(reqA)
+		// ParseJaegerSpansFromRequest returns a *spanfilter.Map as its error; that is not a hard error.
+		assert.True(t, errA == nil || spanfilter.IsMap(errA))
+
+		// via ParseJaegerSpansFromInputList with pre-parsed input
+		var input signalfxformat.InputSpanList
+		require.NoError(t, easyjson.Unmarshal([]byte(body), &input))
+		spansB, errB := ParseJaegerSpansFromInputList(input)
+		assert.True(t, errB == nil || spanfilter.IsMap(errB))
+
+		require.Len(t, spansB, len(spansA))
+		assert.Equal(t, spansA[0].TraceID, spansB[0].TraceID)
+		assert.Equal(t, spansA[0].SpanID, spansB[0].SpanID)
+		assert.Equal(t, spansA[0].OperationName, spansB[0].OperationName)
+	})
+
+	t.Run("empty input returns empty result", func(t *testing.T) {
+		spans, err := ParseJaegerSpansFromInputList(signalfxformat.InputSpanList{})
+		assert.True(t, err == nil || spanfilter.IsMap(err))
+		assert.Empty(t, spans)
+	})
+}
