@@ -72,19 +72,29 @@ type JaegerThriftToSAPMDecoder struct {
 
 // Read reads an http request with a jaeger thrift payload and decodes it into SAPM
 func (j *JaegerThriftToSAPMDecoder) Read(ctx context.Context, req *http.Request) (*splunksapm.PostSpansRequest, error) {
+	sapm, _, err := j.ReadWithRawBatch(ctx, req)
+	return sapm, err
+}
+
+// ReadWithRawBatch decodes a Jaeger Thrift HTTP request in a single pass and returns both the
+// domain-converted SAPM result and the raw *jThrift.Batch. Callers that need raw Thrift fields
+// (e.g. TraceIdHigh/TraceIdLow for trace-ID length hints) can inspect the batch directly without
+// performing a second decode.
+func (j *JaegerThriftToSAPMDecoder) ReadWithRawBatch(ctx context.Context, req *http.Request) (*splunksapm.PostSpansRequest, *jThrift.Batch, error) {
 	batch, err := j.JaegerThriftDecoderBase.Read(ctx, req)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
-	return &splunksapm.PostSpansRequest{
+	sapm := &splunksapm.PostSpansRequest{
 		Batches: []*jaegerpb.Batch{
 			{
 				Spans:   toDomain{}.ToDomain(batch.GetSpans(), batch.GetProcess()),
 				Process: toDomain{}.getProcess(batch.GetProcess()),
 			},
 		},
-	}, nil
+	}
+	return sapm, batch, nil
 }
 
 // NewJaegerThriftToSAPMDecoder returns a new JaegerThriftToSAPMDecoder
