@@ -1,7 +1,7 @@
 run:
   timeout: 5m
   tests: true
-  go: "1.23"
+  go: "1.25"
   # by default isn't set. If set we pass it to "go list -mod={option}". From "go help modules":
   # If invoked with -mod=readonly, the go command is disallowed from the implicit
   # automatic updating of go.mod described above. Instead, it fails when any changes
@@ -35,14 +35,10 @@ linters-settings:
   govet:
     enable:
       - shadow
-  golint:
-    min-confidence: 0.3
   gocyclo:
     min-complexity: 10
   gocognit:
     min-complexity: 30
-  maligned:
-    suggest-new: true
   gofmt:
     # simplify code: gofmt with `-s` option, true by default
     simplify: true
@@ -93,12 +89,6 @@ linters-settings:
   funlen:
     lines: 500 # TODO: need to set this to 150 statements and work on it
     statements: 150
-  ifshort:
-    # Maximum length of variable declaration measured in number of lines, after which linter won't suggest using short syntax.
-    # Has higher priority than max-decl-chars.
-    max-decl-lines: 1
-    # Maximum length of variable declaration measured in number of characters, after which linter won't suggest using short syntax.
-    max-decl-chars: 30
   cyclop:
     # the maximal code complexity to report
     max-complexity: 15
