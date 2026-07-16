@@ -22,4 +22,5 @@ jobs:
         with:
           version: v2.12.2
           args: '--config=.golangci.yml -v'
+          only-new-issues: true
           skip-cache: true
