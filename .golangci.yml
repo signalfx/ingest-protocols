@@ -1,8 +1,9 @@
+version: "2"
+
 run:
   timeout: 5m
   tests: true
-  go: "1.23"
-  # by default isn't set. If set we pass it to "go list -mod={option}". From "go help modules":
+  # If set we pass it to "go list -mod={option}". From "go help modules":
   # If invoked with -mod=readonly, the go command is disallowed from the implicit
   # automatic updating of go.mod described above. Instead, it fails when any changes
   # to go.mod are needed. This setting is most useful to check that go.mod does
@@ -12,166 +13,25 @@ run:
   # the dependency descriptions in go.mod.
   # modules-download-mode: readonly #|release|vendor
 
-issues:
-  # Independently from option `exclude` we use default exclude patterns,
-  # it can be disabled by this option. To list all
-  # excluded by default patterns execute `golangci-lint run --help`.
-  # Default value for this option is true.
-  exclude-use-default: false
-  exclude:
-    - package
-  exclude-dirs:
-    - src/external_libs
-    - gocat
-    - genfiles$
-    - vendor$
-    - ketama
-  exclude-files:
-    - ".*\\.pb\\.go"
-    - ".*\\.gen\\.go"
-    - ".*_easyjson\\.go"
-
-linters-settings:
-  govet:
-    enable:
-      - shadow
-  golint:
-    min-confidence: 0.3
-  gocyclo:
-    min-complexity: 10
-  gocognit:
-    min-complexity: 30
-  maligned:
-    suggest-new: true
-  gofmt:
-    # simplify code: gofmt with `-s` option, true by default
-    simplify: true
-  # settings per analyzer
-  settings:
-    printf: # analyzer name, run `go tool vet help` to see all analyzers
-      funcs: # run `go tool vet help printf` to see available settings for `printf` analyzer
-        - (github.com/golangci/golangci-lint/pkg/logutils.Log).Infof
-        - (github.com/golangci/golangci-lint/pkg/logutils.Log).Warnf
-        - (github.com/golangci/golangci-lint/pkg/logutils.Log).Errorf
-        - (github.com/golangci/golangci-lint/pkg/logutils.Log).Fatalf
-  enabled-tags:
-    - performance
-  gocritic:
-    # Which checks should be enabled; can't be combined with 'disabled-checks';
-    # See https://go-critic.github.io/overview#checks-overview
-    # To check which checks are enabled run `GL_DEBUG=gocritic golangci-lint run`
-    # By default list of stable checks is used.
-    # Which checks should be disabled; can't be combined with 'enabled-checks'; default is empty
-    disabled-checks:
-      - regexpMust
-      - ifElseChain
-      - elseif
-      - unlambda
-
-    # Enable multiple checks by tags, run `GL_DEBUG=gocritic golangci-lint run` to see all tags and checks.
-    # Empty list by default. See https://github.com/go-critic/go-critic#usage -> section "Tags".
-    enabled-tags:
-      - performance
-
-    settings: # settings passed to gocritic
-      captLocal: # must be valid enabled check name
-        paramsOnly: true
-      rangeValCopy:
-        sizeThreshold: 64
-  unparam:
-    # Inspect exported functions, default is false. Set to true if no external program/library imports your code.
-    # XXX: if you enable this setting, un-param will report a lot of false-positives in text editors:
-    # if it's called for subdir of a project it can't find external interfaces. All text editor integrations
-    # with golangci-lint call it on a directory with the changed file.
-    check-exported: false
-  godox:
-    # report any comments starting with keywords, this is useful for TODO or FIXME comments that
-    # might be left in the code accidentally and should be resolved before merging
-    keywords: # default keywords are TODO, BUG, and FIXME, these can be overwritten by this setting
-      - OPTIMIZE # marks code that should be optimized before merging
-      - HACK # marks hack-arounds that should be removed before merging
-  funlen:
-    lines: 500 # TODO: need to set this to 150 statements and work on it
-    statements: 150
-  ifshort:
-    # Maximum length of variable declaration measured in number of lines, after which linter won't suggest using short syntax.
-    # Has higher priority than max-decl-chars.
-    max-decl-lines: 1
-    # Maximum length of variable declaration measured in number of characters, after which linter won't suggest using short syntax.
-    max-decl-chars: 30
-  cyclop:
-    # the maximal code complexity to report
-    max-complexity: 15
-    # should ignore tests (default false)
-    skip-tests: false
-  gosec:
-    # To select a subset of rules to run.
-    # Available rules: https://github.com/securego/gosec#available-rules
-    includes:
-      - G101 # Look for hard coded credentials
-      - G102 # Bind to all interfaces
-      - G106 # Audit the use of ssh.InsecureIgnoreHostKey
-      - G107 # Url provided to HTTP request as taint input
-      - G108 # Profiling endpoint automatically exposed on /debug/pprof
-      - G109 # Potential Integer overflow made by strconv.Atoi result conversion to int16/32
-      - G110 # Potential DoS vulnerability via decompression bomb
-      - G306 # Poor file permissions used when writing to a new file
-      - G401 # Detect the usage of DES, RC4, MD5 or SHA1
-      - G501 # Import blocklist: crypto/md5
-      - G502 # Import blocklist: crypto/des
-      - G503 # Import blocklist: crypto/rc4
-      - G504 # Import blocklist: net/http/cgi
-      - G505 # Import blocklist: crypto/sha1
-    # To specify a set of rules to explicitly exclude.
-    # Available rules: https://github.com/securego/gosec#available-rules
-    excludes:
-      - G204 # Audit use of command execution
-    # To specify the configuration of rules.
-    # The configuration of rules is not fully documented by gosec:
-    # https://github.com/securego/gosec#configuration
-    # https://github.com/securego/gosec/blob/569328eade2ccbad4ce2d0f21ee158ab5356a5cf/rules/rulelist.go#L60-L102
-    config:
-      G306: "0600"
-      G101:
-        pattern: "(?i)pwd|password|private_key|secret"
-        ignore_entropy: false
-        entropy_threshold: "80.0"
-        per_char_threshold: "3.0"
-        truncate: "32"
-  staticcheck:
-    # https://staticcheck.io/docs/options#checks
-    checks:
-      - "all"
-      - "-SA1029"  # disable the check for using string in context value keys 
-      - "-SA1019"  # disable the check for net.Temporary as we use it still
-  dupl:
-    # tokens count to trigger issue, 150 by default
-    threshold: 100
-
 linters:
-  disable-all: true
+  default: none
   enable: # please use alphabetical order when enabling any linters
     - asciicheck
     - bodyclose
+    - copyloopvar
     - cyclop
     - durationcheck
-    - errorlint
     - errname
-    - copyloopvar
+    - errorlint
     - forbidigo
-    - gci
     - gocognit
     - goconst
     - gocyclo
     - godox
-    - gofmt
-    - gofumpt
     - goheader
-    - goimports
     - gomodguard
     - goprintffuncname
     - gosec
-    - gosimple
     - govet
     - ineffassign
     - makezero
@@ -182,7 +42,6 @@ linters:
     - predeclared
     - revive
     - staticcheck
-    - stylecheck
     - testpackage
     - thelper
     - tparallel
@@ -191,17 +50,120 @@ linters:
     - unused
     - wastedassign
     - whitespace
-  fast: true
+  settings:
+    govet:
+      enable:
+        - shadow
+    gocyclo:
+      min-complexity: 10
+    gocognit:
+      min-complexity: 30
+    gocritic:
+      # Which checks should be disabled; can't be combined with 'enabled-checks'; default is empty
+      disabled-checks:
+        - regexpMust
+        - ifElseChain
+        - elseif
+        - unlambda
+      # Enable multiple checks by tags, run `GL_DEBUG=gocritic golangci-lint run` to see all tags and checks.
+      # Empty list by default. See https://github.com/go-critic/go-critic#usage -> section "Tags".
+      enabled-tags:
+        - performance
+      settings: # settings passed to gocritic
+        captLocal: # must be valid enabled check name
+          paramsOnly: true
+        rangeValCopy:
+          sizeThreshold: 64
+    unparam:
+      # Inspect exported functions, default is false. Set to true if no external program/library imports your code.
+      # XXX: if you enable this setting, un-param will report a lot of false-positives in text editors:
+      # if it's called for subdir of a project it can't find external interfaces. All text editor integrations
+      # with golangci-lint call it on a directory with the changed file.
+      check-exported: false
+    godox:
+      # report any comments starting with keywords, this is useful for TODO or FIXME comments that
+      # might be left in the code accidentally and should be resolved before merging
+      keywords: # default keywords are TODO, BUG, and FIXME, these can be overwritten by this setting
+        - OPTIMIZE # marks code that should be optimized before merging
+        - HACK # marks hack-arounds that should be removed before merging
+    cyclop:
+      # the maximal code complexity to report
+      max-complexity: 15
+      # skip-tests was removed in golangci-lint v2; use linters.exclusions.rules to ignore test files instead
+    gosec:
+      # To select a subset of rules to run.
+      # Available rules: https://github.com/securego/gosec#available-rules
+      includes:
+        - G101 # Look for hard coded credentials
+        - G102 # Bind to all interfaces
+        - G106 # Audit the use of ssh.InsecureIgnoreHostKey
+        - G107 # Url provided to HTTP request as taint input
+        - G108 # Profiling endpoint automatically exposed on /debug/pprof
+        - G109 # Potential Integer overflow made by strconv.Atoi result conversion to int16/32
+        - G110 # Potential DoS vulnerability via decompression bomb
+        - G306 # Poor file permissions used when writing to a new file
+        - G401 # Detect the usage of DES, RC4, MD5 or SHA1
+        - G501 # Import blocklist: crypto/md5
+        - G502 # Import blocklist: crypto/des
+        - G503 # Import blocklist: crypto/rc4
+        - G504 # Import blocklist: net/http/cgi
+        - G505 # Import blocklist: crypto/sha1
+      # To specify a set of rules to explicitly exclude.
+      # Available rules: https://github.com/securego/gosec#available-rules
+      excludes:
+        - G204 # Audit use of command execution
+      # To specify the configuration of rules.
+      # The configuration of rules is not fully documented by gosec:
+      # https://github.com/securego/gosec#configuration
+      # https://github.com/securego/gosec/blob/569328eade2ccbad4ce2d0f21ee158ab5356a5cf/rules/rulelist.go#L60-L102
+      config:
+        G306: "0600"
+        G101:
+          pattern: "(?i)pwd|password|private_key|secret"
+          ignore_entropy: false
+          entropy_threshold: "80.0"
+          per_char_threshold: "3.0"
+          truncate: "32"
+    staticcheck:
+      # https://staticcheck.io/docs/options#checks
+      checks:
+        - "all"
+        - "-SA1029"  # disable the check for using string in context value keys
+        - "-SA1019"  # disable the check for net.Temporary as we use it still
+  exclusions:
+    paths:
+      - src/external_libs
+      - gocat
+      - genfiles$
+      - vendor$
+      - ketama
+    rules:
+      - text: "(?i)package"
+        path: ".+\\.go"
+
+# In golangci-lint v2, formatters (gofmt, gofumpt, goimports, gci) are configured
+# separately from linters under the `formatters` key.
+formatters:
+  enable:
+    - gofmt
+    - gofumpt
+    - goimports
+    - gci
+  settings:
+    gofmt:
+      # simplify code: gofmt with `-s` option, true by default
+      simplify: true
+  exclusions:
+    paths:
+      - ".*\\.pb\\.go"
+      - ".*\\.gen\\.go"
+      - ".*_easyjson\\.go"
 
 # output configuration options
 output:
-  # formats configuration
   formats:
-    - format: colored-line-number
+    # colored-line-number was renamed to `text` in golangci-lint v2
+    text:
       path: stdout
-
-  # print lines of code with issue, default is true
-  print-issued-lines: true
-
-  # print linter name in the end of issue text, default is true
-  print-linter-name: true
+      print-issued-lines: true
+      print-linter-name: true
