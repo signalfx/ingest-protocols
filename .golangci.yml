@@ -4,30 +4,6 @@ run:
   timeout: 5m
   tests: true
 
-issues:
-  exclusion-rules:
-    - text: "(?i)package"
-      path: ".+\\.go"
-  exclusion-paths:
-    - src/external_libs
-    - gocat
-    - genfiles$
-    - vendor$
-    - ketama
-    - ".*\\.pb\\.go"
-    - ".*\\.gen\\.go"
-    - ".*_easyjson\\.go"
-
-formatters:
-  enable:
-    - gofmt
-    - gofumpt
-    - goimports
-    - gci
-  settings:
-    gofmt:
-      simplify: true
-
 linters:
   default: none
   enable:
@@ -94,7 +70,6 @@ linters:
         - HACK
     cyclop:
       max-complexity: 15
-      skip-tests: false
     gosec:
       includes:
         - G101
@@ -126,8 +101,33 @@ linters:
         - "all"
         - "-SA1029"
         - "-SA1019"
+  exclusions:
+    paths:
+      - src/external_libs
+      - gocat
+      - genfiles$
+      - vendor$
+      - ketama
+    rules:
+      - text: "(?i)package"
+        path: ".+\\.go"
+
+formatters:
+  enable:
+    - gofmt
+    - gofumpt
+    - goimports
+    - gci
+  settings:
+    gofmt:
+      simplify: true
+  exclusions:
+    paths:
+      - ".*\\.pb\\.go"
+      - ".*\\.gen\\.go"
+      - ".*_easyjson\\.go"
 
 output:
   formats:
-    colored-line-number:
+    text:
       path: stdout
