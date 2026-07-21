@@ -13,7 +13,7 @@ require (
 	github.com/opentracing/opentracing-go v1.2.0
 	github.com/signalfx/com_signalfx_metrics_protobuf v0.0.3
 	github.com/signalfx/gohelpers v0.0.0-20151202220853-ac9f0e053f15
-	github.com/signalfx/golib/v3 v3.4.1
+	github.com/signalfx/golib/v3 v3.5.0
 	github.com/signalfx/sapm-proto v0.18.0
 	github.com/stretchr/testify v1.11.1
 	go.opentelemetry.io/proto/otlp v1.7.1
